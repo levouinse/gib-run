@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2026-02-08
+
+### Added
+- 🔑 **Tunnel Password Display** - Automatically fetch and display LocalTunnel password
+  - Password is your public IP address
+  - Automatically fetched from `https://loca.lt/mytunnelpassword`
+  - Displayed in console when tunnel starts
+  - Share with visitors to access your site
+- 🚀 **Bypass Instructions** - Clear instructions for bypassing LocalTunnel password page
+  - Set header: `bypass-tunnel-reminder: any-value`
+  - Or use custom User-Agent header
+  - Perfect for API/webhook requests
+- 📋 **Enhanced Tunnel Info** - Better tunnel information display
+  - Shows password for LocalTunnel
+  - Shows bypass options
+  - Consistent display across all tunnel services
+
+### Improved
+- Better error handling for tunnel password fetch
+- More informative tunnel startup messages
+- Updated README with detailed tunnel password documentation
+
 ## [2.1.0] - 2026-02-08
 
 ### Added - Major Features

@@ -372,7 +372,7 @@ gib-runs
 Network URLs are **ALWAYS shown automatically** when you start the server:
 
 ```
-🚀 GIB-RUNS v2.1.0
+🚀 GIB-RUNS v2.2.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -491,7 +491,7 @@ gib-runs --tunnel-service=tunnelto
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.1.0
+🚀 GIB-RUNS v2.2.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -505,9 +505,37 @@ gib-runs --tunnel-service=tunnelto
      (No signup needed - true accessibility!)
   ✓ Tunnel active!
   🌍 Public URL: https://random-name-123.loca.lt
+  🔑 Tunnel Password: 123.45.67.89
+     (Share this with visitors to access your site)
+  🚀 Bypass Options:
+     • Set header: bypass-tunnel-reminder: any-value
+     • Or use custom User-Agent header
      Share this URL with anyone, anywhere!
      💡 Unlike political positions, this is accessible to all!
 ```
+
+### LocalTunnel Password & Bypass
+
+**LocalTunnel requires a password for first-time visitors from each IP address.**
+
+The password is automatically fetched and displayed when you start the tunnel. It's your **public IP address**.
+
+**Two ways to bypass the password page:**
+
+1. **Set a bypass header** (recommended for API/webhook requests):
+   ```bash
+   curl -H "bypass-tunnel-reminder: true" https://your-tunnel.loca.lt
+   ```
+
+2. **Use a custom User-Agent**:
+   ```bash
+   curl -A "MyCustomBot/1.0" https://your-tunnel.loca.lt
+   ```
+
+**For browser visitors:**
+- They'll see the password page once per IP every 7 days
+- Share the tunnel password (shown in console) with them
+- Or they can visit `https://loca.lt/mytunnelpassword` from the same network
 
 **This is TRUE accessibility - no family connections, no nepotism, just pure merit-based access!** 🔥
 
@@ -577,7 +605,7 @@ pm2 list
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.1.0
+🚀 GIB-RUNS v2.2.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
