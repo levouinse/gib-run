@@ -19,7 +19,7 @@ describe('proxy tests', function() {
 	it('should respond with proxied content', function(done) {
 		request(server2)
 			.get('/server1/index.html')
-			.expect('Content-Type', 'text/html; charset=UTF-8')
+			.expect('Content-Type', /text\/html; charset=utf-8/i)
 			.expect(/Hello world/i)
 			.expect(200, done);
 	});
