@@ -1,0 +1,87 @@
+{
+  "name": "gib-run",
+  "version": "2.0.0",
+  "description": "Modern development server with live reload, hot module replacement, and advanced features for all project types - runs on merit, not nepotism",
+  "keywords": [
+    "development",
+    "server",
+    "live-reload",
+    "hot-reload",
+    "hmr",
+    "http",
+    "https",
+    "http2",
+    "spa",
+    "cli",
+    "devserver",
+    "watch",
+    "websocket",
+    "performance",
+    "compression",
+    "proxy"
+  ],
+  "author": "sofinco (https://github.com/levouinse)",
+  "dependencies": {
+    "chokidar": "^3.5.3",
+    "chalk": "^4.1.2",
+    "connect": "^3.7.0",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "event-stream": "^4.0.1",
+    "faye-websocket": "^0.11.4",
+    "http-auth": "^4.2.0",
+    "morgan": "^1.10.0",
+    "object-assign": "^4.1.1",
+    "open": "^8.4.2",
+    "proxy-middleware": "^0.15.0",
+    "send": "^0.18.0",
+    "serve-index": "^1.9.1",
+    "boxen": "^5.1.2",
+    "ora": "^5.4.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "jshint": "^2.13.6",
+    "mocha": "^10.2.0",
+    "supertest": "^6.3.3"
+  },
+  "scripts": {
+    "lint": "eslint gib-run.js index.js",
+    "hint": "jshint gib-run.js index.js",
+    "test": "mocha test --exit && npm run lint"
+  },
+  "bin": {
+    "gib-run": "./gib-run.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/levouinse/gib-run.git"
+  },
+  "bugs": {
+    "url": "https://github.com/levouinse/gib-run/issues"
+  },
+  "homepage": "https://github.com/levouinse/gib-run#readme",
+  "engines": {
+    "node": ">=12.0.0"
+  },
+  "preferGlobal": true,
+  "license": "MIT",
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es6": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2020
+    },
+    "rules": {
+      "quotes": 0,
+      "curly": 0,
+      "strict": 0,
+      "no-process-exit": 0,
+      "eqeqeq": 1,
+      "no-unused-vars": 1,
+      "no-shadow": 1
+    }
+  }
+}

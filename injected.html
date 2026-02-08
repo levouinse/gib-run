@@ -1,0 +1,115 @@
+<!-- Code injected by gib-run -->
+<script type="text/javascript">
+	// <![CDATA[  <-- For SVG support
+	if ('WebSocket' in window) {
+		(function() {
+			var gibRunConnected = false;
+			var reconnectAttempts = 0;
+			var maxReconnectAttempts = 10;
+			
+			// Inject status indicator
+			var statusDiv = document.createElement('div');
+			statusDiv.id = 'gib-run-status';
+			statusDiv.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:10px 15px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border-radius:8px;font-family:system-ui,-apple-system,sans-serif;font-size:12px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:999999;display:flex;align-items:center;gap:8px;transition:all 0.3s ease;opacity:0;transform:translateY(10px)';
+			
+			var statusIcon = document.createElement('span');
+			statusIcon.innerHTML = '●';
+			statusIcon.style.cssText = 'font-size:16px;animation:pulse 2s ease-in-out infinite';
+			
+			var statusText = document.createElement('span');
+			statusText.textContent = 'Connecting...';
+			
+			statusDiv.appendChild(statusIcon);
+			statusDiv.appendChild(statusText);
+			
+			// Add pulse animation
+			var style = document.createElement('style');
+			style.textContent = '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes slideIn{to{opacity:1;transform:translateY(0)}}';
+			document.head.appendChild(style);
+			
+			function updateStatus(status, color) {
+				statusIcon.style.color = color;
+				statusText.textContent = status;
+				if (!gibRunConnected && status === 'Live Reload Active') {
+					statusDiv.style.animation = 'slideIn 0.3s ease forwards';
+					setTimeout(function() {
+						statusDiv.style.opacity = '0.7';
+					}, 2000);
+				}
+			}
+			
+			function refreshCSS() {
+				var sheets = [].slice.call(document.getElementsByTagName("link"));
+				var head = document.getElementsByTagName("head")[0];
+				for (var i = 0; i < sheets.length; ++i) {
+					var elem = sheets[i];
+					var rel = elem.rel;
+					if (elem.href && typeof rel != "string" || rel.length == 0 || rel.toLowerCase() == "stylesheet") {
+						head.removeChild(elem);
+						var url = elem.href.replace(/(&|\?)_cacheOverride=\d+/, '');
+						elem.href = url + (url.indexOf('?') >= 0 ? '&' : '?') + '_cacheOverride=' + (new Date().valueOf());
+						head.appendChild(elem);
+					}
+				}
+				updateStatus('CSS Updated ✨', '#4ade80');
+				setTimeout(function() {
+					updateStatus('Live Reload Active', '#4ade80');
+				}, 1500);
+			}
+			
+			function connect() {
+				var protocol = window.location.protocol === 'http:' ? 'ws://' : 'wss://';
+				var address = protocol + window.location.host + window.location.pathname + '/ws';
+				var socket = new WebSocket(address);
+				
+				socket.onopen = function() {
+					gibRunConnected = true;
+					reconnectAttempts = 0;
+					updateStatus('Live Reload Active', '#4ade80');
+					console.log('%c🚀 GIB-RUN %cLive reload connected', 'color:#667eea;font-weight:bold;font-size:14px', 'color:#666;font-size:12px');
+				};
+				
+				socket.onmessage = function(msg) {
+					if (msg.data == 'reload') {
+						updateStatus('Reloading...', '#fbbf24');
+						setTimeout(function() {
+							window.location.reload();
+						}, 100);
+					}
+					else if (msg.data == 'refreshcss') {
+						refreshCSS();
+					}
+				};
+				
+				socket.onclose = function() {
+					gibRunConnected = false;
+					if (reconnectAttempts < maxReconnectAttempts) {
+						reconnectAttempts++;
+						updateStatus('Reconnecting...', '#fbbf24');
+						setTimeout(connect, 1000 * reconnectAttempts);
+					} else {
+						updateStatus('Disconnected', '#ef4444');
+					}
+				};
+				
+				socket.onerror = function() {
+					updateStatus('Connection Error', '#ef4444');
+				};
+			}
+			
+			// Wait for DOM to be ready
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', function() {
+					document.body.appendChild(statusDiv);
+					connect();
+				});
+			} else {
+				document.body.appendChild(statusDiv);
+				connect();
+			}
+		})();
+	} else {
+		console.warn('WebSocket not supported. Live reload disabled.');
+	}
+	// ]]>
+</script>

@@ -1,0 +1,10 @@
+test/
+.travis.yml
+.editorconfig
+.github/
+*.backup
+node_modules/
+.DS_Store
+.vscode/
+.idea/
+*.log
