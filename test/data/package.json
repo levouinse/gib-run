@@ -1,0 +1,9 @@
+{
+  "name": "test-app",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "echo 'Development server running...' && sleep 2",
+    "start": "echo 'Production server starting...' && sleep 2",
+    "build": "echo 'Building application...' && sleep 1"
+  }
+}

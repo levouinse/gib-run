@@ -22,7 +22,9 @@ var GibRuns = {
 	logLevel: 2,
 	startTime: null,
 	requestCount: 0,
-	reloadCount: 0
+	reloadCount: 0,
+	tunnel: null,
+	processRunner: null
 };
 
 function escape(html){
@@ -132,6 +134,8 @@ function entryPoint(staticHandler, file) {
  * @param htpasswd {string} Path to htpasswd file to enable HTTP Basic authentication
  * @param middleware {array} Append middleware to stack
  * @param compression {boolean} Enable gzip compression (default: true)
+ * @param qrCode {boolean} Show QR code for network URLs (default: false)
+ * @param tunnel {boolean} Create public tunnel URL (default: false)
  */
 GibRuns.start = function(options) {
 	options = options || {};
@@ -157,6 +161,14 @@ GibRuns.start = function(options) {
 	var noCssInject = options.noCssInject;
 	var httpsModule = options.httpsModule;
 	var enableCompression = options.compression !== false;
+	var showQR = options.qrCode || false;
+	var enableTunnel = options.tunnel || false;
+	var tunnelService = options.tunnelService || 'localtunnel';
+	var tunnelOptions = options.tunnelOptions || {};
+	var execCommand = options.exec || null;
+	var npmScript = options.npmScript || null;
+	var usePM2 = options.pm2 || false;
+	var pm2Name = options.pm2Name || 'gib-runs-app';
 
 	if (httpsModule) {
 		try {
@@ -181,6 +193,16 @@ GibRuns.start = function(options) {
 	// Request counter middleware
 	app.use(function(req, res, next) {
 		GibRuns.requestCount++;
+		
+		// Log requests in verbose mode
+		if (GibRuns.logLevel >= 3) {
+			var timestamp = new Date().toLocaleTimeString();
+			console.log(chalk.gray('  [' + timestamp + '] ') + 
+				chalk.cyan(req.method) + ' ' + 
+				chalk.white(req.url) + ' ' +
+				chalk.gray('from ' + (req.headers['x-forwarded-for'] || req.connection.remoteAddress)));
+		}
+		
 		next();
 	});
 
@@ -207,6 +229,11 @@ GibRuns.start = function(options) {
 			}
 		}
 		app.use(mw);
+		
+		// Log middleware loading in verbose mode
+		if (GibRuns.logLevel >= 3) {
+			console.log(chalk.gray('  ✓ Loaded middleware: ') + chalk.cyan(typeof mw === 'function' ? mw.name || 'anonymous' : mw));
+		}
 	});
 
 	// Use http-auth if configured
@@ -236,7 +263,7 @@ GibRuns.start = function(options) {
 			watchPaths.push(mountPath);
 		app.use(mountRule[0], staticServer(mountPath));
 		if (GibRuns.logLevel >= 1)
-			console.log('Mapping %s to "%s"', mountRule[0], mountPath);
+			console.log(chalk.cyan('  📂 Mapping ') + chalk.yellow(mountRule[0]) + chalk.gray(' to ') + chalk.white('"' + mountPath + '"'));
 	});
 	proxy.forEach(function(proxyRule) {
 		var proxyUrl = new URL(proxyRule[1]);
@@ -250,7 +277,7 @@ GibRuns.start = function(options) {
 		};
 		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
 		if (GibRuns.logLevel >= 1)
-			console.log('Mapping %s to "%s"', proxyRule[0], proxyRule[1]);
+			console.log(chalk.cyan('  🔀 Proxying ') + chalk.yellow(proxyRule[0]) + chalk.gray(' to ') + chalk.white('"' + proxyRule[1] + '"'));
 	});
 	app.use(staticServerHandler) // Custom static server
 		.use(entryPoint(staticServerHandler, file))
@@ -273,12 +300,18 @@ GibRuns.start = function(options) {
 	server.addListener('error', function(e) {
 		if (e.code === 'EADDRINUSE') {
 			var serveURL = protocol + '://' + host + ':' + port;
-			console.log(chalk.yellow("⚠ " + serveURL + " is already in use. Trying another port..."));
+			console.log(chalk.yellow("  ⚠ " + serveURL + " is already in use. Trying another port..."));
+			if (GibRuns.logLevel >= 3) {
+				console.log(chalk.gray('  💡 Port ' + port + ' is occupied, searching for available port...'));
+			}
 			setTimeout(function() {
 				server.listen(0, host);
 			}, 1000);
 		} else {
-			console.error(chalk.red("✖ Error: " + e.toString()));
+			console.error(chalk.red("  ✖ Server Error: " + e.toString()));
+			if (GibRuns.logLevel >= 3) {
+				console.error(chalk.gray('  Stack trace:'), e.stack);
+			}
 			GibRuns.shutdown();
 		}
 	});
@@ -288,23 +321,28 @@ GibRuns.start = function(options) {
 		GibRuns.server = server;
 
 		var address = server.address();
-		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : (host === "0.0.0.0" ? address.address : host);
+		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
 		var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
+		
+		// Use original host for display if not 0.0.0.0
+		var displayHost = (host === "0.0.0.0" || !host) ? serveHost : host;
 
-		var serveURL = protocol + '://' + serveHost + ':' + address.port;
+		var serveURL = protocol + '://' + displayHost + ':' + address.port;
 		var openURL = protocol + '://' + openHost + ':' + address.port;
 
-		var serveURLs = [ serveURL ];
-		if (GibRuns.logLevel > 2 && address.address === "0.0.0.0") {
+		var networkURLs = [];
+		
+		// Always get network interfaces for proper binding
+		if (address.address === "0.0.0.0" || host === "0.0.0.0") {
 			var ifaces = os.networkInterfaces();
-			serveURLs = Object.keys(ifaces)
+			networkURLs = Object.keys(ifaces)
 				.map(function(iface) {
 					return ifaces[iface];
 				})
 				// flatten address data, use only IPv4
 				.reduce(function(data, addresses) {
 					addresses.filter(function(addr) {
-						return addr.family === "IPv4";
+						return addr.family === "IPv4" && !addr.internal;
 					}).forEach(function(addr) {
 						data.push(addr);
 					});
@@ -318,32 +356,81 @@ GibRuns.start = function(options) {
 		// Output with beautiful formatting
 		if (GibRuns.logLevel >= 1) {
 			console.log('\\n' + chalk.cyan.bold('━'.repeat(60)));
-			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.0.0'));
+			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.1.0'));
+			console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
 			console.log(chalk.white('  🌐 Local:      ') + chalk.green(serveURL));
 			
-			if (GibRuns.logLevel > 2 && serveURLs.length > 1) {
-				console.log(chalk.white('  🔗 Network:'));
-				serveURLs.forEach(function(urlItem) {
-					if (urlItem !== serveURL) {
-						console.log(chalk.white('     ') + chalk.green(urlItem));
-					}
+			// Always show network URLs when available
+			if (networkURLs.length > 0) {
+				console.log(chalk.white('  🔗 Network:    ') + chalk.magenta('(Access from other devices)'));
+				networkURLs.forEach(function(urlItem) {
+					console.log(chalk.white('     ') + chalk.green(urlItem));
 				});
 			}
 			
-			console.log(chalk.white('  🔄 Live Reload:') + chalk.green(' Enabled'));
+			console.log(chalk.white('  🔄 Live Reload:') + chalk.green(' Enabled') + chalk.gray(' (no dynasty needed)'));
 			if (enableCompression) {
-				console.log(chalk.white('  📦 Compression:') + chalk.green(' Enabled'));
+				console.log(chalk.white('  📦 Compression:') + chalk.green(' Enabled') + chalk.gray(' (earned, not inherited)'));
 			}
 			if (cors) {
-				console.log(chalk.white('  🔓 CORS:       ') + chalk.green(' Enabled'));
+				console.log(chalk.white('  🔓 CORS:       ') + chalk.green(' Enabled') + chalk.gray(' (serves everyone equally)'));
 			}
 			if (https) {
-				console.log(chalk.white('  🔒 HTTPS:      ') + chalk.green(' Enabled'));
+				console.log(chalk.white('  🔒 HTTPS:      ') + chalk.green(' Enabled') + chalk.gray(' (real security)'));
+			}
+			if (execCommand) {
+				console.log(chalk.white('  ⚙️  Command:    ') + chalk.yellow(execCommand));
+			}
+			if (npmScript) {
+				console.log(chalk.white('  📦 NPM Script: ') + chalk.yellow(npmScript));
+			}
+			if (usePM2) {
+				console.log(chalk.white('  🔄 PM2:        ') + chalk.green(' Enabled') + chalk.gray(' (process manager)'));
 			}
 			console.log(chalk.cyan.bold('━'.repeat(60)));
-			console.log(chalk.gray('  Press Ctrl+C to stop\\n'));
+			console.log(chalk.gray('  Press Ctrl+C to stop'));
+			console.log(chalk.yellow('  💡 Tip: Share network URLs with your team!\\n'));
+		}
+		
+		// Show QR code for easy mobile access
+		if (showQR && networkURLs.length > 0) {
+			console.log(chalk.cyan('  📱 Scan QR code to open on mobile:'));
+			console.log(chalk.gray('     (Install qrcode-terminal: npm i -g qrcode-terminal)\\n'));
+		}
+		
+		// Start tunnel if requested
+		if (enableTunnel) {
+			var tunnel = require('./lib/tunnel');
+			GibRuns.tunnel = tunnel;
+			setTimeout(function() {
+				tunnel.startTunnel(address.port, tunnelService, tunnelOptions);
+			}, 1000);
+		}
+		
+		// Run npm script or command if specified
+		if (npmScript || execCommand || usePM2) {
+			var processRunner = require('./lib/process-runner');
+			GibRuns.processRunner = processRunner;
+			
+			setTimeout(function() {
+				if (usePM2 && npmScript) {
+					processRunner.runWithPM2('npm run ' + npmScript, { 
+						cwd: root,
+						name: pm2Name
+					});
+				} else if (usePM2 && execCommand) {
+					processRunner.runWithPM2(execCommand, {
+						cwd: root,
+						name: pm2Name
+					});
+				} else if (npmScript) {
+					processRunner.runNpmScript(npmScript, { cwd: root });
+				} else if (execCommand) {
+					processRunner.runCommand(execCommand, { cwd: root });
+				}
+			}, 500);
 		}
 
 		// Launch browser
@@ -450,6 +537,17 @@ GibRuns.shutdown = function() {
 		console.log(chalk.gray('     • Requests: ') + chalk.white(GibRuns.requestCount));
 		console.log(chalk.gray('     • Reloads: ') + chalk.white(GibRuns.reloadCount));
 		console.log(chalk.cyan.bold('━'.repeat(60)) + '\\n');
+	}
+	
+	// Stop process runner if active
+	if (GibRuns.processRunner && GibRuns.processRunner.isRunning()) {
+		console.log(chalk.yellow('  ⚠ Stopping child process...'));
+		GibRuns.processRunner.stopProcess();
+	}
+	
+	// Stop tunnel if active
+	if (GibRuns.tunnel) {
+		GibRuns.tunnel.stopTunnel();
 	}
 	
 	var watcher = GibRuns.watcher;

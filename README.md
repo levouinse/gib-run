@@ -1,6 +1,7 @@
 [![npm version](https://img.shields.io/npm/v/gib-runs.svg)](https://www.npmjs.org/package/gib-runs)
 [![npm downloads](https://img.shields.io/npm/dm/gib-runs.svg)](https://www.npmjs.org/package/gib-runs)
 [![license](https://img.shields.io/npm/l/gib-runs.svg)](https://github.com/levouinse/gib-runs/blob/main/LICENSE)
+[![tests](https://img.shields.io/badge/tests-32%20passing-brightgreen.svg)](https://github.com/levouinse/gib-runs)
 
 # 🚀 GIB-RUNS
 
@@ -10,16 +11,22 @@
 
 Inspired by the need for something that actually **runs** based on capability, not nepotism. This development server proves that with the right features and hard work, you don't need a famous last name to be successful.
 
+> *"When your dev server has more qualifications than Indonesia's Vice President."* 🔥
+
 ## 🎭 Why "GIB-RUNS"?
 
-The name is a playful nod to someone who got a head start in life. But unlike certain political figures, this server:
-- ✅ Actually earned its position through features
-- ✅ Works hard without shortcuts
-- ✅ Doesn't rely on daddy's connections
-- ✅ Serves everyone equally, regardless of background
-- ✅ Transparent about what it does (no hidden agendas)
+The name is a playful nod to Indonesia's Vice President Gibran Rakabuming Raka, who got a head start in life thanks to his father, President Joko Widodo. But unlike certain political figures, this server:
+- ✅ Actually earned its position through features (not family connections)
+- ✅ Works hard without shortcuts (no Constitutional Court manipulation needed)
+- ✅ Doesn't rely on daddy's connections (or changing age requirements)
+- ✅ Serves everyone equally, regardless of background (true meritocracy)
+- ✅ Transparent about what it does (no hidden agendas or dynasty building)
+- ✅ Accessible to all networks (unlike political positions reserved for family)
+- ✅ Performance based on real metrics (not manufactured popularity)
 
 *"When your development server has more integrity than some vice presidents."* 😏
+
+*"GIB-RUNS: Proving that with actual features and hard work, you don't need a presidential father to succeed."*
 
 ## ✨ Features
 
@@ -36,15 +43,23 @@ The name is a playful nod to someone who got a head start in life. But unlike ce
 - 🔌 **Proxy Support** - Proxy API requests during development
 - 📦 **Middleware Support** - Extend functionality with custom middleware
 - 🎭 **Mount Directories** - Serve multiple directories on different routes
+- 🚀 **NPM Scripts** - Run npm dev, start, or any script alongside server
+- ⚙️ **Custom Commands** - Execute any command with live reload
+- 🔄 **PM2 Integration** - Production-ready process management
 
 ### Advanced Features (Built on Competence)
 - 🔍 **Smart File Watching** - Intelligent change detection with debouncing (actually smart, not just called smart)
 - 🎪 **Auto Reconnection** - WebSocket reconnection with exponential backoff
 - 📱 **Multi-Device Support** - Access from any device on your network (meritocracy in action)
+- 🌍 **Public Tunnels** - Share your dev server with anyone, anywhere (true accessibility)
 - 🎨 **Colored Logging** - Beautiful, informative console output
 - ⚙️ **Highly Configurable** - Extensive CLI options and config file support
 - 🚦 **Status Indicator** - Visual feedback on connection status
 - 📈 **Statistics** - Detailed metrics on shutdown (real data, not manufactured success stories)
+- 🛡️ **Security Headers** - Production-ready security (real protection, not just a famous name)
+- ⚡ **Performance Monitoring** - Track slow requests and optimize (actual performance metrics)
+- 🚦 **Rate Limiting** - Protect against abuse (better protection than family connections)
+- 🌐 **Network Access** - True network binding that actually works (unlike some political promises)
 
 ## 📦 Installation
 
@@ -128,6 +143,18 @@ gib-runs dist --port=3000 --spa --cors --no-browser
 | `--https-module=MODULE` | Custom HTTPS module | `https` |
 | `--proxy=ROUTE:URL` | Proxy requests | None |
 | `--middleware=PATH` | Custom middleware | None |
+| `--performance` | Enable performance monitoring | `false` |
+| `--security` | Enable security headers | `false` |
+| `--rate-limit=N` | Rate limit (requests/min) | None |
+| `--qr, --qrcode` | Show QR code for mobile | `false` |
+| `--tunnel` | Create public tunnel | `false` |
+| `--tunnel-service=NAME` | Tunnel service (lt, cf, ngrok, etc) | `localtunnel` |
+| `--tunnel-subdomain=SUB` | Custom subdomain | None |
+| `--tunnel-authtoken=TOK` | Auth token for tunnel | None |
+| `--exec=COMMAND` | Run custom command | None |
+| `--npm-script=SCRIPT` | Run npm script (dev, start, etc) | None |
+| `--pm2` | Use PM2 process manager | `false` |
+| `--pm2-name=NAME` | PM2 app name | `gib-runs-app` |
 | `-v, --version` | Show version | - |
 | `-h, --help` | Show help | - |
 
@@ -271,6 +298,31 @@ Use it:
 gib-runs --middleware=./middleware/custom.js
 ```
 
+### Built-in Middleware
+
+**Performance Monitoring** (tracks slow requests):
+```bash
+gib-runs --performance
+```
+Unlike Gibran's career metrics, these are real performance numbers.
+
+**Security Headers** (production-ready security):
+```bash
+gib-runs --security
+```
+Real security, not just a famous last name protecting you.
+
+**Rate Limiting** (protect against abuse):
+```bash
+gib-runs --rate-limit=100  # 100 requests per minute
+```
+Better protection than family connections provide.
+
+**Combine Multiple Features**:
+```bash
+gib-runs --performance --security --rate-limit=50
+```
+
 ## 📊 Status Indicator
 
 GIB-RUNS includes a beautiful status indicator that appears in the bottom-right corner of your page:
@@ -311,25 +363,246 @@ gib-runs --htpasswd=.htpasswd
 
 ## 🌐 Network Access
 
-Access your server from other devices:
+Access your server from other devices on your network - **this actually works, unlike some political promises**:
 
+```bash
+gib-runs
+```
+
+Network URLs are **ALWAYS shown automatically** when you start the server:
+
+```
+🚀 GIB-RUNS v2.0.0
+"Unlike Gibran, this actually works through merit"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📁 Root:       /home/user/project
+  🌐 Local:      http://127.0.0.1:8080
+  🔗 Network:    (Access from other devices)
+     http://192.168.1.100:8080
+     http://10.0.0.5:8080
+  🔄 Live Reload: Enabled (no dynasty needed)
+  📦 Compression: Enabled (earned, not inherited)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Unlike Gibran's career path, these network URLs are accessible to everyone based on actual network connectivity, not family connections!**
+
+### Features that Actually Work:
+- ✅ **Real Network Binding** - Server binds to `0.0.0.0` by default (serves everyone equally)
+- ✅ **Auto Network Detection** - Automatically detects all network interfaces (no favoritism)
+- ✅ **Mobile Access** - Access from phones, tablets, any device (true accessibility)
+- ✅ **Team Sharing** - Share URLs with your team instantly (collaboration without nepotism)
+
+Use `--verbose` to see even more details:
 ```bash
 gib-runs --verbose
 ```
 
-This will show all network interfaces:
+## 🌍 Public Tunnels (Share with the World!)
+
+**Unlike political positions that are reserved for family, these tunnels are open to EVERYONE!**
+
+Create a public URL to share your local server with anyone, anywhere:
+
+```bash
+# Default (LocalTunnel - no signup needed!)
+gib-runs --tunnel
+
+# Cloudflare Tunnel (fast and reliable)
+gib-runs --tunnel-service=cloudflared
+
+# Ngrok (popular choice)
+gib-runs --tunnel-service=ngrok --tunnel-authtoken=YOUR_TOKEN
+
+# Pinggy (simple and fast)
+gib-runs --tunnel-service=pinggy
+
+# Localtonet
+gib-runs --tunnel-service=localtonet
+
+# Tunnelto (Rust-based)
+gib-runs --tunnel-service=tunnelto
+```
+
+### Supported Tunnel Services
+
+| Service | Command | Signup Required | Notes |
+|---------|---------|-----------------|-------|
+| **LocalTunnel** | `--tunnel` or `--tunnel-service=lt` | ❌ No | Default, easiest option |
+| **Cloudflare** | `--tunnel-service=cloudflared` | ❌ No | Fast, requires cloudflared binary |
+| **Ngrok** | `--tunnel-service=ngrok` | ✅ Yes | Popular, requires authtoken |
+| **Pinggy** | `--tunnel-service=pinggy` | ❌ No | Simple, uses SSH |
+| **Localtonet** | `--tunnel-service=localtonet` | ✅ Yes | Requires binary |
+| **Tunnelto** | `--tunnel-service=tunnelto` | ❌ No | Rust-based, fast |
+
+### Installation Instructions
+
+**LocalTunnel** (Default - No installation needed!):
+```bash
+# Already included! Just run:
+gib-runs --tunnel
+```
+
+**Cloudflare Tunnel**:
+```bash
+# Install cloudflared
+# Linux:
+wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+sudo chmod +x /usr/local/bin/cloudflared
+
+# macOS:
+brew install cloudflare/cloudflare/cloudflared
+
+# Then run:
+gib-runs --tunnel-service=cloudflared
+```
+
+**Ngrok**:
+```bash
+# Install ngrok
+npm install -g ngrok
+
+# Get authtoken from https://dashboard.ngrok.com/get-started/your-authtoken
+gib-runs --tunnel-service=ngrok --tunnel-authtoken=YOUR_TOKEN
+```
+
+**Pinggy** (Uses SSH - usually pre-installed):
+```bash
+gib-runs --tunnel-service=pinggy
+```
+
+**Localtonet**:
+```bash
+# Download from https://localtonet.com/download
+# Then run:
+gib-runs --tunnel-service=localtonet
+```
+
+**Tunnelto**:
+```bash
+# Install with Cargo
+cargo install tunnelto
+
+# Then run:
+gib-runs --tunnel-service=tunnelto
+```
+
+### Example Output
+
 ```
 🚀 GIB-RUNS v2.0.0
+"Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080
-  🔗 Network:
+  🔗 Network:    (Access from other devices)
      http://192.168.1.100:8080
-     http://10.0.0.5:8080
-  🔄 Live Reload: Enabled
-  📦 Compression: Enabled
+  🔄 Live Reload: Enabled (no dynasty needed)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🌐 Starting LocalTunnel...
+     (No signup needed - true accessibility!)
+  ✓ Tunnel active!
+  🌍 Public URL: https://random-name-123.loca.lt
+     Share this URL with anyone, anywhere!
+     💡 Unlike political positions, this is accessible to all!
 ```
+
+**This is TRUE accessibility - no family connections, no nepotism, just pure merit-based access!** 🔥
+
+## 🚀 NPM Scripts & Process Management
+
+**Run your development scripts alongside the live server - unlike some VPs, these processes actually work!**
+
+### Run NPM Scripts
+
+```bash
+# Run npm dev script
+gib-runs --npm-script=dev
+
+# Run npm start script
+gib-runs --npm-script=start
+
+# Run any npm script
+gib-runs --npm-script=build
+```
+
+### Run Custom Commands
+
+```bash
+# Run any command
+gib-runs --exec="node server.js"
+
+# Run complex commands
+gib-runs --exec="npm run build && npm start"
+
+# Run with environment variables
+gib-runs --exec="NODE_ENV=production node app.js"
+```
+
+### PM2 Integration
+
+**Production-ready process management - earned through features, not family connections!**
+
+```bash
+# Run with PM2
+gib-runs --npm-script=dev --pm2
+
+# Custom PM2 app name
+gib-runs --npm-script=start --pm2 --pm2-name=my-app
+
+# Run command with PM2
+gib-runs --exec="node server.js" --pm2 --pm2-name=backend
+```
+
+**PM2 Commands:**
+```bash
+# View logs
+pm2 logs gib-runs-app
+
+# Stop process
+pm2 stop gib-runs-app
+
+# Restart process
+pm2 restart gib-runs-app
+
+# Delete process
+pm2 delete gib-runs-app
+
+# View all processes
+pm2 list
+```
+
+### Example Output
+
+```
+🚀 GIB-RUNS v2.0.0
+"Unlike Gibran, this actually works through merit"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  📁 Root:       /home/user/project
+  🌐 Local:      http://127.0.0.1:8080
+  🔗 Network:    (Access from other devices)
+     http://192.168.1.100:8080
+  🔄 Live Reload: Enabled (no dynasty needed)
+  📦 Compression: Enabled (earned, not inherited)
+  📦 NPM Script: dev
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  🚀 Running npm script: dev
+     Working directory: /home/user/project
+     (Earned through merit, not inheritance)
+
+  ✓ Found script: vite
+  ✓ Process started (PID: 12345)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[npm] VITE v5.0.0  ready in 500 ms
+[npm] ➜  Local:   http://localhost:5173/
+[npm] ➜  Network: http://192.168.1.100:5173/
+```
+
+**Unlike Gibran's career, these processes run on actual merit and capability!** 🔥
 
 ## 🐛 Troubleshooting
 

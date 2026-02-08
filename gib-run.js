@@ -132,6 +132,61 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.cors = true;
 		process.argv.splice(i, 1);
 	}
+	else if (arg === "--qr" || arg === "--qrcode") {
+		opts.qrCode = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--tunnel") {
+		opts.tunnel = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--tunnel-service=") > -1) {
+		opts.tunnelService = arg.substring(17);
+		opts.tunnel = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--tunnel-subdomain=") > -1) {
+		if (!opts.tunnelOptions) opts.tunnelOptions = {};
+		opts.tunnelOptions.subdomain = arg.substring(19);
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--tunnel-authtoken=") > -1) {
+		if (!opts.tunnelOptions) opts.tunnelOptions = {};
+		opts.tunnelOptions.authtoken = arg.substring(19);
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--exec=") > -1) {
+		opts.exec = arg.substring(7);
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--npm-script=") > -1) {
+		opts.npmScript = arg.substring(13);
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--pm2") {
+		opts.pm2 = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--pm2-name=") > -1) {
+		opts.pm2Name = arg.substring(11);
+		opts.pm2 = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--performance") {
+		opts.middleware.push("performance");
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--security") {
+		opts.middleware.push("security");
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--rate-limit=") > -1) {
+		var limit = parseInt(arg.substring(13), 10);
+		opts.middleware.push(function() {
+			return require('./middleware/rate-limit')({ max: limit });
+		});
+		process.argv.splice(i, 1);
+	}
 	else if (arg.indexOf("--https=") > -1) {
 		opts.https = arg.substring(8);
 		process.argv.splice(i, 1);
@@ -152,12 +207,13 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 	}
 	else if (arg === "--help" || arg === "-h") {
 		console.log(chalk.cyan.bold('\n  🚀 GIB-RUNS') + chalk.gray(' - Modern Development Server\n'));
+		console.log(chalk.gray('  "Unlike Gibran, this server earned its position through features"\n'));
 		console.log(chalk.white('  Usage: ') + chalk.yellow('gib-runs') + chalk.gray(' [options] [path]\n'));
 		console.log(chalk.white('  Options:\n'));
 		console.log(chalk.yellow('    -v, --version          ') + chalk.gray('Display version'));
 		console.log(chalk.yellow('    -h, --help             ') + chalk.gray('Show this help'));
 		console.log(chalk.yellow('    -q, --quiet            ') + chalk.gray('Suppress logging'));
-		console.log(chalk.yellow('    -V, --verbose          ') + chalk.gray('Verbose logging'));
+		console.log(chalk.yellow('    -V, --verbose          ') + chalk.gray('Verbose logging (shows network IPs)'));
 		console.log(chalk.yellow('    --port=PORT            ') + chalk.gray('Set port (default: 8080)'));
 		console.log(chalk.yellow('    --host=HOST            ') + chalk.gray('Set host (default: 0.0.0.0)'));
 		console.log(chalk.yellow('    --open=PATH            ') + chalk.gray('Open browser to path'));
@@ -175,11 +231,30 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		console.log(chalk.yellow('    --https=PATH           ') + chalk.gray('HTTPS config module'));
 		console.log(chalk.yellow('    --https-module=MODULE  ') + chalk.gray('Custom HTTPS module'));
 		console.log(chalk.yellow('    --proxy=ROUTE:URL      ') + chalk.gray('Proxy requests'));
-		console.log(chalk.yellow('    --middleware=PATH      ') + chalk.gray('Add middleware\n'));
+		console.log(chalk.yellow('    --middleware=PATH      ') + chalk.gray('Add middleware'));
+		console.log(chalk.yellow('    --qr, --qrcode         ') + chalk.gray('Show QR code for mobile'));
+		console.log(chalk.yellow('    --performance          ') + chalk.gray('Enable performance monitoring'));
+		console.log(chalk.yellow('    --security             ') + chalk.gray('Enable security headers'));
+		console.log(chalk.yellow('    --rate-limit=N         ') + chalk.gray('Rate limit (requests/min)'));
+		console.log(chalk.yellow('    --tunnel               ') + chalk.gray('Create public tunnel (default: localtunnel)'));
+		console.log(chalk.yellow('    --tunnel-service=NAME  ') + chalk.gray('Tunnel: lt, cf, ngrok, pinggy, etc'));
+		console.log(chalk.yellow('    --tunnel-subdomain=SUB ') + chalk.gray('Custom subdomain (if supported)'));
+		console.log(chalk.yellow('    --tunnel-authtoken=TOK ') + chalk.gray('Auth token (for ngrok, etc)'));
+		console.log(chalk.yellow('    --exec=COMMAND         ') + chalk.gray('Run custom command'));
+		console.log(chalk.yellow('    --npm-script=SCRIPT    ') + chalk.gray('Run npm script (dev, start, etc)'));
+		console.log(chalk.yellow('    --pm2                  ') + chalk.gray('Use PM2 process manager'));
+		console.log(chalk.yellow('    --pm2-name=NAME        ') + chalk.gray('PM2 app name (default: gib-runs-app)\n'));
 		console.log(chalk.gray('  Examples:\n'));
 		console.log(chalk.gray('    gib-runs'));
-		console.log(chalk.gray('    gib-runs --port=3000 --open=/index.html'));
-		console.log(chalk.gray('    gib-runs dist --spa --no-browser\n'));
+		console.log(chalk.gray('    gib-runs --port=3000 --verbose'));
+		console.log(chalk.gray('    gib-runs dist --spa --security'));
+		console.log(chalk.gray('    gib-runs --tunnel'));
+		console.log(chalk.gray('    gib-runs --tunnel-service=cloudflared'));
+		console.log(chalk.gray('    gib-runs --tunnel-service=ngrok --tunnel-authtoken=YOUR_TOKEN'));
+		console.log(chalk.gray('    gib-runs --npm-script=dev'));
+		console.log(chalk.gray('    gib-runs --exec="npm run build && npm start"'));
+		console.log(chalk.gray('    gib-runs --npm-script=dev --pm2 --pm2-name=my-app'));
+		console.log(chalk.gray('    gib-runs --performance --rate-limit=50\n'));
 		process.exit();
 	}
 	else if (arg === "--test") {
