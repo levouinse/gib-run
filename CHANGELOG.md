@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-02-10
+
+### Fixed - Critical
+- 🔧 **NPM Script Mode** - Fixed major issues with `--npm-script` and `--exec` options
+  - No longer creates duplicate HTTP server on port 8080
+  - Browser no longer opens to wrong port (8080 instead of dev server port)
+  - Static file serving disabled when npm script is running (prevents MIME type conflicts)
+  - Fixed "Cannot GET /" and blank page issues with Vite/React/Vue projects
+  - GIB-RUNS now acts as pure file watcher for live reload when npm script is active
+- 🚫 **Browser Auto-Open** - Disabled automatic browser opening when using `--npm-script` or `--exec`
+  - Prevents confusion with wrong port
+  - Let the dev server (Vite, Next.js, etc) handle browser opening
+- 🎯 **File Watcher** - Improved file watching with better ignore patterns
+  - Ignores Vite temporary files (`.timestamp-*.mjs`)
+  - Ignores common build artifacts (`.log`, `.lock`, `.tmp`)
+  - Cleaner console output without spam
+
+### Improved
+- 📝 **Cleaner Logs** - Removed verbose output from process runner
+  - No more `[npm]` or `[cmd]` prefixes cluttering output
+  - Direct passthrough of npm script output
+  - Only show errors when process exits with non-zero code
+- 🎨 **Better UI** - Simplified status display
+  - Removed norak "(Access from other devices)" text
+  - Network URLs displayed directly without extra labels
+  - Cleaner, more professional output
+- ⚡ **Performance** - Optimized server startup
+  - Minimal HTTP server for WebSocket when npm script is running
+  - Reduced memory footprint in npm script mode
+  - Faster startup time
+
+### Technical
+- Fixed JSHint warning about closure in loop (rate-limit middleware)
+- All 32 tests still passing
+- Zero ESLint/JSHint warnings
+- Backward compatible with all existing features
+
 ## [2.2.0] - 2026-02-08
 
 ### Added
@@ -71,12 +108,6 @@ All notable changes to this project will be documented in this file.
 - 🚦 Rate limiting middleware (`--rate-limit=N`) - protect against abuse
 - 📱 QR code option (`--qr`, `--qrcode`) for mobile access
 - 🌍 **Public Tunnels** - Share dev server with anyone, anywhere
-  - LocalTunnel (default, no signup needed)
-  - Cloudflare Tunnel support
-  - Ngrok support
-  - Pinggy support
-  - Localtonet support
-  - Tunnelto support
 - 🚀 **NPM Scripts Integration** - Run npm dev, start, or any script alongside server
 - ⚙️ **Custom Command Execution** - Execute any command with live reload
 - 🔄 **PM2 Integration** - Production-ready process management
@@ -113,7 +144,7 @@ All notable changes to this project will be documented in this file.
 - More informative console output with helpful tips
 - Enhanced developer experience
 - Improved documentation
-- Network URLs prominently displayed with "Access from other devices" label
+- Network URLs prominently displayed
 
 ### Technical
 - Upgraded chokidar to v3.5.3

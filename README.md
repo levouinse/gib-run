@@ -372,14 +372,14 @@ gib-runs
 Network URLs are **ALWAYS shown automatically** when you start the server:
 
 ```
-🚀 GIB-RUNS v2.2.0
+🚀 GIB-RUNS v2.3.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
-  🌐 Local:      http://127.0.0.1:8080
-  🔗 Network:    (Access from other devices)
-     http://192.168.1.100:8080
-     http://10.0.0.5:8080
+  🌐 Local:   🔗 Network:    http://127.0.0.1:8080
+  🔗 Network:    
+  🔗 Network:    http://192.168.1.100:8080
+  🔗 Network:    http://10.0.0.5:8080
   🔄 Live Reload: Enabled (no dynasty needed)
   📦 Compression: Enabled (earned, not inherited)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -491,13 +491,13 @@ gib-runs --tunnel-service=tunnelto
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.2.0
+🚀 GIB-RUNS v2.3.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
-  🌐 Local:      http://127.0.0.1:8080
-  🔗 Network:    (Access from other devices)
-     http://192.168.1.100:8080
+  🌐 Local:   🔗 Network:    http://127.0.0.1:8080
+  🔗 Network:    
+  🔗 Network:    http://192.168.1.100:8080
   🔄 Live Reload: Enabled (no dynasty needed)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -541,12 +541,21 @@ The password is automatically fetched and displayed when you start the tunnel. I
 
 ## 🚀 NPM Scripts & Process Management
 
-**Run your development scripts alongside the live server - unlike some VPs, these processes actually work!**
+**Run your development scripts with live reload - GIB-RUNS acts as a smart file watcher!**
+
+### How It Works
+
+When you use `--npm-script` or `--exec`, GIB-RUNS:
+- ✅ **Does NOT create HTTP server** on port 8080
+- ✅ **Does NOT open browser** automatically
+- ✅ **Only watches files** for live reload
+- ✅ **Lets your dev server** (Vite, Next.js, etc) handle everything
+- ✅ **No port conflicts** - clean and simple
 
 ### Run NPM Scripts
 
 ```bash
-# Run npm dev script
+# Run npm dev script (Vite, Next.js, etc)
 gib-runs --npm-script=dev
 
 # Run npm start script
@@ -555,6 +564,13 @@ gib-runs --npm-script=start
 # Run any npm script
 gib-runs --npm-script=build
 ```
+
+**What happens:**
+- Your npm script runs normally (e.g., Vite on port 3000)
+- GIB-RUNS watches files for changes
+- Live reload works via WebSocket
+- No duplicate servers, no conflicts
+- Clean output directly from your dev server
 
 ### Run Custom Commands
 
@@ -605,13 +621,13 @@ pm2 list
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.2.0
+🚀 GIB-RUNS v2.3.0
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
-  🌐 Local:      http://127.0.0.1:8080
-  🔗 Network:    (Access from other devices)
-     http://192.168.1.100:8080
+  🌐 Local:   🔗 Network:    http://127.0.0.1:8080
+  🔗 Network:    
+  🔗 Network:    http://192.168.1.100:8080
   🔄 Live Reload: Enabled (no dynasty needed)
   📦 Compression: Enabled (earned, not inherited)
   📦 NPM Script: dev

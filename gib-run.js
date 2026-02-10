@@ -182,9 +182,11 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 	}
 	else if (arg.indexOf("--rate-limit=") > -1) {
 		var limit = parseInt(arg.substring(13), 10);
-		opts.middleware.push(function() {
-			return require('./middleware/rate-limit')({ max: limit });
-		});
+		opts.middleware.push((function(maxLimit) {
+			return function() {
+				return require('./middleware/rate-limit')({ max: maxLimit });
+			};
+		})(limit));
 		process.argv.splice(i, 1);
 	}
 	else if (arg.indexOf("--https=") > -1) {

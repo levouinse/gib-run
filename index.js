@@ -146,9 +146,16 @@ GibRuns.start = function(options) {
 	var mount = options.mount || [];
 	var watchPaths = options.watch || [root];
 	GibRuns.logLevel = options.logLevel === undefined ? 2 : options.logLevel;
+	
+	// Disable browser opening if npm script or exec command is used
 	var openPath = (options.open === undefined || options.open === true) ?
 		"" : ((options.open === null || options.open === false) ? null : options.open);
 	if (options.noBrowser) openPath = null; // Backwards compatibility with 0.7.0
+	
+	// Force disable browser if npm script or exec is running
+	if (options.npmScript || options.exec) {
+		openPath = null;
+	}
 	var file = options.file;
 	var staticServerHandler = staticServer(root);
 	var wait = options.wait === undefined ? 100 : options.wait;
@@ -186,106 +193,124 @@ GibRuns.start = function(options) {
 	// Setup a web server
 	var app = connect();
 
+	// If npm script is running, don't serve static files (let the npm script handle it)
+	var serveStatic = !npmScript && !execCommand;
+
 	// Enable compression for better performance
-	if (enableCompression) {
+	if (enableCompression && serveStatic) {
 		app.use(compression());
 	}
 
 	// Request counter middleware
-	app.use(function(req, res, next) {
-		GibRuns.requestCount++;
-		
-		// Log requests in verbose mode
-		if (GibRuns.logLevel >= 3) {
-			var timestamp = new Date().toLocaleTimeString();
-			console.log(chalk.gray('  [' + timestamp + '] ') + 
-				chalk.cyan(req.method) + ' ' + 
-				chalk.white(req.url) + ' ' +
-				chalk.gray('from ' + (req.headers['x-forwarded-for'] || req.connection.remoteAddress)));
-		}
-		
-		next();
-	});
+	if (serveStatic) {
+		app.use(function(req, res, next) {
+			GibRuns.requestCount++;
+			
+			// Log requests in verbose mode
+			if (GibRuns.logLevel >= 3) {
+				var timestamp = new Date().toLocaleTimeString();
+				console.log(chalk.gray('  [' + timestamp + '] ') + 
+					chalk.cyan(req.method) + ' ' + 
+					chalk.white(req.url) + ' ' +
+					chalk.gray('from ' + (req.headers['x-forwarded-for'] || req.connection.remoteAddress)));
+			}
+			
+			next();
+		});
 
-	// Add logger. Level 2 logs only errors
-	if (GibRuns.logLevel === 2) {
-		app.use(logger('dev', {
-			skip: function (req, res) { return res.statusCode < 400; }
-		}));
-	// Level 2 or above logs all requests
-	} else if (GibRuns.logLevel > 2) {
-		app.use(logger('dev'));
+		// Add logger. Level 2 logs only errors
+		if (GibRuns.logLevel === 2) {
+			app.use(logger('dev', {
+				skip: function (req, res) { return res.statusCode < 400; }
+			}));
+		// Level 2 or above logs all requests
+		} else if (GibRuns.logLevel > 2) {
+			app.use(logger('dev'));
+		}
 	}
-	if (options.spa) {
+	
+	if (options.spa && serveStatic) {
 		middleware.push("spa");
 	}
-	// Add middleware
-	middleware.map(function(mw) {
-		if (typeof mw === "string") {
-			var ext = path.extname(mw).toLocaleLowerCase();
-			if (ext !== ".js") {
-				mw = require(path.join(__dirname, "middleware", mw + ".js"));
-			} else {
-				mw = require(mw);
+	
+	// Add middleware only if serving static
+	if (serveStatic) {
+		middleware.map(function(mw) {
+			if (typeof mw === "string") {
+				var ext = path.extname(mw).toLocaleLowerCase();
+				if (ext !== ".js") {
+					mw = require(path.join(__dirname, "middleware", mw + ".js"));
+				} else {
+					mw = require(mw);
+				}
 			}
-		}
-		app.use(mw);
-		
-		// Log middleware loading in verbose mode
-		if (GibRuns.logLevel >= 3) {
-			console.log(chalk.gray('  ✓ Loaded middleware: ') + chalk.cyan(typeof mw === 'function' ? mw.name || 'anonymous' : mw));
-		}
-	});
+			app.use(mw);
+			
+			// Log middleware loading in verbose mode
+			if (GibRuns.logLevel >= 3) {
+				console.log(chalk.gray('  ✓ Loaded middleware: ') + chalk.cyan(typeof mw === 'function' ? mw.name || 'anonymous' : mw));
+			}
+		});
 
-	// Use http-auth if configured
-	if (htpasswd !== null) {
-		var auth = require('http-auth');
-		var basic = auth.basic({
-			realm: "Please authorize",
-			file: htpasswd
-		});
-		// Create middleware wrapper for http-auth v4
-		app.use(function(req, res, next) {
-			var authHandler = basic.check(function() {
-				next();
+		// Use http-auth if configured
+		if (htpasswd !== null) {
+			var auth = require('http-auth');
+			var basic = auth.basic({
+				realm: "Please authorize",
+				file: htpasswd
 			});
-			authHandler(req, res);
+			// Create middleware wrapper for http-auth v4
+			app.use(function(req, res, next) {
+				var authHandler = basic.check(function() {
+					next();
+				});
+				authHandler(req, res);
+			});
+		}
+		if (cors) {
+			app.use(require("cors")({
+				origin: true, // reflecting request origin
+				credentials: true // allowing requests with credentials
+			}));
+		}
+		mount.forEach(function(mountRule) {
+			var mountPath = path.resolve(process.cwd(), mountRule[1]);
+			if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
+				watchPaths.push(mountPath);
+			app.use(mountRule[0], staticServer(mountPath));
+			if (GibRuns.logLevel >= 1)
+				console.log(chalk.cyan('  📂 Mapping ') + chalk.yellow(mountRule[0]) + chalk.gray(' to ') + chalk.white('"' + mountPath + '"'));
 		});
+		proxy.forEach(function(proxyRule) {
+			var proxyUrl = new URL(proxyRule[1]);
+			var proxyOpts = {
+				protocol: proxyUrl.protocol,
+				host: proxyUrl.hostname,
+				port: proxyUrl.port,
+				pathname: proxyUrl.pathname,
+				via: true,
+				preserveHost: true
+			};
+			app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
+			if (GibRuns.logLevel >= 1)
+				console.log(chalk.cyan('  🔀 Proxying ') + chalk.yellow(proxyRule[0]) + chalk.gray(' to ') + chalk.white('"' + proxyRule[1] + '"'));
+		});
+		app.use(staticServerHandler) // Custom static server
+			.use(entryPoint(staticServerHandler, file))
+			.use(serveIndex(root, { icons: true }));
 	}
-	if (cors) {
-		app.use(require("cors")({
-			origin: true, // reflecting request origin
-			credentials: true // allowing requests with credentials
-		}));
-	}
-	mount.forEach(function(mountRule) {
-		var mountPath = path.resolve(process.cwd(), mountRule[1]);
-		if (!options.watch) // Auto add mount paths to wathing but only if exclusive path option is not given
-			watchPaths.push(mountPath);
-		app.use(mountRule[0], staticServer(mountPath));
-		if (GibRuns.logLevel >= 1)
-			console.log(chalk.cyan('  📂 Mapping ') + chalk.yellow(mountRule[0]) + chalk.gray(' to ') + chalk.white('"' + mountPath + '"'));
-	});
-	proxy.forEach(function(proxyRule) {
-		var proxyUrl = new URL(proxyRule[1]);
-		var proxyOpts = {
-			protocol: proxyUrl.protocol,
-			host: proxyUrl.hostname,
-			port: proxyUrl.port,
-			pathname: proxyUrl.pathname,
-			via: true,
-			preserveHost: true
-		};
-		app.use(proxyRule[0], require('proxy-middleware')(proxyOpts));
-		if (GibRuns.logLevel >= 1)
-			console.log(chalk.cyan('  🔀 Proxying ') + chalk.yellow(proxyRule[0]) + chalk.gray(' to ') + chalk.white('"' + proxyRule[1] + '"'));
-	});
-	app.use(staticServerHandler) // Custom static server
-		.use(entryPoint(staticServerHandler, file))
-		.use(serveIndex(root, { icons: true }));
 
 	var server, protocol;
-	if (https !== null) {
+	
+	// If npm script or exec command is running, skip HTTP server entirely
+	if (npmScript || execCommand) {
+		// Create a minimal server just for WebSocket
+		server = http.createServer(function(req, res) {
+			res.writeHead(200);
+			res.end('GIB-RUNS Live Reload Server');
+		});
+		protocol = "http";
+	} else if (https !== null) {
 		var httpsConfig = https;
 		if (typeof https === "string") {
 			httpsConfig = require(path.resolve(process.cwd(), https));
@@ -322,6 +347,55 @@ GibRuns.start = function(options) {
 		GibRuns.server = server;
 
 		var address = server.address();
+		
+		// If npm script is running, don't show server info
+		if (npmScript || execCommand) {
+			// Show info about what's running
+			if (GibRuns.logLevel >= 1) {
+				console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
+				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.0'));
+				console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
+				console.log(chalk.cyan.bold('━'.repeat(60)));
+				console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
+				if (npmScript) {
+					console.log(chalk.white('  📦 NPM Script: ') + chalk.yellow(npmScript));
+				}
+				if (execCommand) {
+					console.log(chalk.white('  ⚙️  Command:    ') + chalk.yellow(execCommand));
+				}
+				if (usePM2) {
+					console.log(chalk.white('  🔄 PM2:        ') + chalk.green(' Enabled') + chalk.gray(' (process manager)'));
+				}
+				console.log(chalk.white('  🔄 Live Reload:') + chalk.green(' Enabled') + chalk.gray(' (watching for changes)'));
+				console.log(chalk.cyan.bold('━'.repeat(60)));
+				console.log(chalk.gray('  Press Ctrl+C to stop\n'));
+			}
+			
+			// Run the npm script or command
+			setTimeout(function() {
+				var processRunner = require('./lib/process-runner');
+				GibRuns.processRunner = processRunner;
+				
+				if (usePM2 && npmScript) {
+					processRunner.runWithPM2('npm run ' + npmScript, { 
+						cwd: root,
+						name: pm2Name
+					});
+				} else if (usePM2 && execCommand) {
+					processRunner.runWithPM2(execCommand, {
+						cwd: root,
+						name: pm2Name
+					});
+				} else if (npmScript) {
+					processRunner.runNpmScript(npmScript, { cwd: root });
+				} else if (execCommand) {
+					processRunner.runCommand(execCommand, { cwd: root });
+				}
+			}, 500);
+			
+			return;
+		}
+		
 		var serveHost = address.address === "0.0.0.0" ? "127.0.0.1" : address.address;
 		var openHost = host === "0.0.0.0" ? "127.0.0.1" : host;
 		
@@ -356,18 +430,17 @@ GibRuns.start = function(options) {
 
 		// Output with beautiful formatting
 		if (GibRuns.logLevel >= 1) {
-			console.log('\\n' + chalk.cyan.bold('━'.repeat(60)));
-			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.2.0'));
+			console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
+			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.0'));
 			console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
 			console.log(chalk.white('  🌐 Local:      ') + chalk.green(serveURL));
 			
-			// Always show network URLs when available
+			// Show network URLs when available
 			if (networkURLs.length > 0) {
-				console.log(chalk.white('  🔗 Network:    ') + chalk.magenta('(Access from other devices)'));
 				networkURLs.forEach(function(urlItem) {
-					console.log(chalk.white('     ') + chalk.green(urlItem));
+					console.log(chalk.white('  🔗 Network:    ') + chalk.green(urlItem));
 				});
 			}
 			
@@ -381,24 +454,15 @@ GibRuns.start = function(options) {
 			if (https) {
 				console.log(chalk.white('  🔒 HTTPS:      ') + chalk.green(' Enabled') + chalk.gray(' (real security)'));
 			}
-			if (execCommand) {
-				console.log(chalk.white('  ⚙️  Command:    ') + chalk.yellow(execCommand));
-			}
-			if (npmScript) {
-				console.log(chalk.white('  📦 NPM Script: ') + chalk.yellow(npmScript));
-			}
-			if (usePM2) {
-				console.log(chalk.white('  🔄 PM2:        ') + chalk.green(' Enabled') + chalk.gray(' (process manager)'));
-			}
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.gray('  Press Ctrl+C to stop'));
-			console.log(chalk.yellow('  💡 Tip: Share network URLs with your team!\\n'));
+			console.log(chalk.yellow('  💡 Tip: Share network URLs with your team!\n'));
 		}
 		
 		// Show QR code for easy mobile access
 		if (showQR && networkURLs.length > 0) {
 			console.log(chalk.cyan('  📱 Scan QR code to open on mobile:'));
-			console.log(chalk.gray('     (Install qrcode-terminal: npm i -g qrcode-terminal)\\n'));
+			console.log(chalk.gray('     (Install qrcode-terminal: npm i -g qrcode-terminal)\n'));
 		}
 		
 		// Start tunnel if requested
@@ -408,30 +472,6 @@ GibRuns.start = function(options) {
 			setTimeout(function() {
 				tunnel.startTunnel(address.port, tunnelService, tunnelOptions);
 			}, 1000);
-		}
-		
-		// Run npm script or command if specified
-		if (npmScript || execCommand || usePM2) {
-			var processRunner = require('./lib/process-runner');
-			GibRuns.processRunner = processRunner;
-			
-			setTimeout(function() {
-				if (usePM2 && npmScript) {
-					processRunner.runWithPM2('npm run ' + npmScript, { 
-						cwd: root,
-						name: pm2Name
-					});
-				} else if (usePM2 && execCommand) {
-					processRunner.runWithPM2(execCommand, {
-						cwd: root,
-						name: pm2Name
-					});
-				} else if (npmScript) {
-					processRunner.runNpmScript(npmScript, { cwd: root });
-				} else if (execCommand) {
-					processRunner.runCommand(execCommand, { cwd: root });
-				}
-			}, 500);
 		}
 
 		// Launch browser
@@ -450,8 +490,16 @@ GibRuns.start = function(options) {
 		}
 	});
 
-	// Setup server to listen at port
-	server.listen(port, host);
+	// Setup server to listen at port (skip if npm script is running)
+	if (serveStatic) {
+		server.listen(port, host);
+	} else {
+		// For npm script mode, just setup websocket server without HTTP
+		GibRuns.server = server;
+		
+		// Start listening on a random port for WebSocket only
+		server.listen(0, '127.0.0.1');
+	}
 
 	// WebSocket
 	var clients = [];
@@ -485,6 +533,12 @@ GibRuns.start = function(options) {
 	var ignored = [
 		function(testPath) { // Always ignore dotfiles (important e.g. because editor hidden temp files)
 			return testPath !== "." && /(^[.#]|(?:__|~)$)/.test(path.basename(testPath));
+		},
+		function(testPath) { // Ignore vite temp files
+			return /\.timestamp-.*\.mjs$/.test(testPath);
+		},
+		function(testPath) { // Ignore common build artifacts
+			return /\.(log|lock|tmp)$/.test(testPath);
 		}
 	];
 	if (options.ignore) {
