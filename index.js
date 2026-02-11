@@ -353,7 +353,7 @@ GibRuns.start = function(options) {
 			// Show info about what's running
 			if (GibRuns.logLevel >= 1) {
 				console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
-				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.0'));
+				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.2'));
 				console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 				console.log(chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
@@ -443,7 +443,7 @@ GibRuns.start = function(options) {
 		// Output with beautiful formatting
 		if (GibRuns.logLevel >= 1) {
 			console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
-			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.0'));
+			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.2'));
 			console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
