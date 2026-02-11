@@ -391,6 +391,18 @@ GibRuns.start = function(options) {
 				} else if (execCommand) {
 					processRunner.runCommand(execCommand, { cwd: root });
 				}
+				
+				// Start tunnel if requested (for npm/exec mode)
+				if (enableTunnel) {
+					var tunnel = require('./lib/tunnel');
+					GibRuns.tunnel = tunnel;
+					setTimeout(function() {
+						// For npm/exec mode, we need to detect the port from the process output
+						// For now, use a default port or let user specify via --port
+						var tunnelPort = port || 8080;
+						tunnel.startTunnel(tunnelPort, tunnelService, tunnelOptions);
+					}, 2000);
+				}
 			}, 500);
 			
 			return;
