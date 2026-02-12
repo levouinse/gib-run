@@ -100,8 +100,14 @@ function staticServer(root) {
 				res.setHeader('Content-Length', len);
 				var originalPipe = stream.pipe;
 				stream.pipe = function(resp) {
+					// Replace environment variables ${VAR_NAME} with actual values
+					var envReplacer = es.mapSync(function(data) {
+						return data.toString().replace(/\$\{([^}]+)\}/g, function(match, varName) {
+							return process.env[varName] || '';
+						});
+					});
 					var codeInject = es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
-					originalPipe.call(stream, codeInject).pipe(resp);
+					originalPipe.call(stream, envReplacer).pipe(codeInject).pipe(resp);
 				};
 			}
 		}

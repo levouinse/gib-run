@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.3.5] - 2026-02-12
+## [2.3.6] - 2026-02-12
 
 ### Added
 - 🔄 **Environment Variable Replacement** - Automatic replacement of `${VAR_NAME}` patterns in HTML files
