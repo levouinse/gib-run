@@ -74,12 +74,6 @@ function staticServer(root) {
 			if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
 				// TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
 				var contents = fs.readFileSync(filepath, "utf8");
-				
-				// Replace environment variables like ${APP_NAME}
-				contents = contents.replace(/\$\{([A-Z_]+)\}/g, function(fullMatch, varName) {
-					return process.env[varName] || fullMatch;
-				});
-				
 				for (var i = 0; i < injectCandidates.length; ++i) {
 					match = injectCandidates[i].exec(contents);
 					if (match) {
@@ -106,12 +100,8 @@ function staticServer(root) {
 				res.setHeader('Content-Length', len);
 				var originalPipe = stream.pipe;
 				stream.pipe = function(resp) {
-					// Replace ${ENV_VAR} then inject code
-					var envReplace = es.replace(/\$\{([A-Z_]+)\}/g, function(match, varName) {
-						return process.env[varName] || match;
-					});
 					var codeInject = es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
-					originalPipe.call(stream, envReplace).pipe(codeInject).pipe(resp);
+					originalPipe.call(stream, codeInject).pipe(resp);
 				};
 			}
 		}
