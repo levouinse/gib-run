@@ -1,6 +1,6 @@
 {
   "name": "gib-runs",
-  "version": "2.3.2",
+  "version": "2.3.4",
   "description": "Modern development server with live reload, hot module replacement, and advanced features for all project types - runs on merit, not nepotism",
   "keywords": [
     "development",
@@ -28,11 +28,13 @@
     "compression": "^1.7.4",
     "connect": "^3.7.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
     "event-stream": "^4.0.1",
     "faye-websocket": "^0.11.4",
     "http-auth": "^4.2.0",
     "localtunnel": "^2.0.2",
     "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
     "object-assign": "^4.1.1",
     "open": "^8.4.2",
     "ora": "^5.4.1",

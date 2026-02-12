@@ -140,6 +140,26 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.tunnel = true;
 		process.argv.splice(i, 1);
 	}
+	else if (arg === "--auto-restart") {
+		opts.autoRestart = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--enable-upload") {
+		opts.enableUpload = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--no-health") {
+		opts.enableHealth = false;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--log-to-file") {
+		opts.logToFile = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--no-error-page") {
+		opts.customErrorPage = false;
+		process.argv.splice(i, 1);
+	}
 	else if (arg.indexOf("--tunnel-service=") > -1) {
 		opts.tunnelService = arg.substring(17);
 		opts.tunnel = true;
@@ -245,7 +265,12 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		console.log(chalk.yellow('    --exec=COMMAND         ') + chalk.gray('Run custom command'));
 		console.log(chalk.yellow('    --npm-script=SCRIPT    ') + chalk.gray('Run npm script (dev, start, etc)'));
 		console.log(chalk.yellow('    --pm2                  ') + chalk.gray('Use PM2 process manager'));
-		console.log(chalk.yellow('    --pm2-name=NAME        ') + chalk.gray('PM2 app name (default: gib-runs-app)\n'));
+		console.log(chalk.yellow('    --pm2-name=NAME        ') + chalk.gray('PM2 app name (default: gib-runs-app)'));
+		console.log(chalk.yellow('    --auto-restart         ') + chalk.gray('Auto-restart server on crash'));
+		console.log(chalk.yellow('    --enable-upload        ') + chalk.gray('Enable file upload endpoint'));
+		console.log(chalk.yellow('    --no-health            ') + chalk.gray('Disable health check endpoint'));
+		console.log(chalk.yellow('    --log-to-file          ') + chalk.gray('Log requests to file'));
+		console.log(chalk.yellow('    --no-error-page        ') + chalk.gray('Disable custom error pages\n'));
 		console.log(chalk.gray('  Examples:\n'));
 		console.log(chalk.gray('    gib-runs'));
 		console.log(chalk.gray('    gib-runs --port=3000 --verbose'));
@@ -256,7 +281,9 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		console.log(chalk.gray('    gib-runs --npm-script=dev'));
 		console.log(chalk.gray('    gib-runs --exec="npm run build && npm start"'));
 		console.log(chalk.gray('    gib-runs --npm-script=dev --pm2 --pm2-name=my-app'));
-		console.log(chalk.gray('    gib-runs --performance --rate-limit=50\n'));
+		console.log(chalk.gray('    gib-runs --performance --rate-limit=50'));
+		console.log(chalk.gray('    gib-runs --auto-restart --enable-upload'));
+		console.log(chalk.gray('    gib-runs --log-to-file --verbose\n'));
 		process.exit();
 	}
 	else if (arg === "--test") {

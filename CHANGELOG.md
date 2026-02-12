@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.4] - 2026-02-12
+
+### Added - New Features 🎉
+- 🔁 **Auto-Restart on Crash** - Server automatically restarts on unexpected errors
+  - Use `--auto-restart` flag to enable
+  - Attempts up to 5 restarts before giving up
+  - Resilient mode for production-like development
+  - Displays restart attempt count in console
+- 📤 **File Upload Endpoint** - Built-in file upload support for development
+  - Use `--enable-upload` flag to enable
+  - POST files to `/upload` endpoint
+  - 10MB file size limit
+  - Files saved to `./uploads` directory
+  - Returns JSON response with file details
+- 💚 **Health Check Endpoint** - Monitor server health and statistics
+  - Enabled by default (use `--no-health` to disable)
+  - Access via `GET /health` or `GET /_health`
+  - Returns JSON with uptime, memory usage, request count, reload count
+  - System information (CPU, memory, platform)
+  - Perfect for monitoring and debugging
+- 📝 **Request Logging to File** - Log all requests to file for debugging
+  - Use `--log-to-file` flag to enable
+  - Logs saved to `gib-runs.log` in project root
+  - JSON format with timestamp, method, URL, IP, user-agent, status, duration
+  - Automatic log rotation at 10MB
+  - Old logs backed up with timestamp
+- 🎨 **Custom Error Pages** - Beautiful, informative error pages
+  - Enabled by default (use `--no-error-page` to disable)
+  - Modern gradient design with detailed error information
+  - Shows error stack trace in development mode
+  - Covers all HTTP error codes (400, 401, 403, 404, 500, etc)
+  - Responsive design for mobile devices
+- 🌍 **Environment Variable Support** - Automatic .env file loading
+  - Automatically loads `.env` file from project root
+  - Uses dotenv package
+  - No configuration needed, just create `.env` file
+  - Perfect for API keys, database URLs, etc
+- 📡 **WebSocket Broadcasting API** - Send custom messages to all connected clients
+  - New `GibRuns.broadcast(message)` method
+  - Broadcast custom reload triggers or notifications
+  - Useful for custom build tools and integrations
+
+### Improved
+- 🔧 **Better Error Handling** - More informative error messages with stack traces
+- 📊 **Enhanced Health Monitoring** - More detailed system metrics
+- 🎯 **Middleware Architecture** - Cleaner middleware loading and organization
+- 📦 **Dependencies** - Added `dotenv` and `multer` for new features
+
+### Technical
+- Version bumped to 2.3.4
+- All existing tests passing
+- Backward compatible with all previous versions
+- New middleware files: `upload.js`, `health.js`, `logger.js`, `error-page.js`
+- Enhanced GibRuns object with `wsClients`, `autoRestart`, `restartCount` properties
+
 ## [2.3.0] - 2026-02-10
 
 ### Fixed - Critical

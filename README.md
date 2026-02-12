@@ -3,7 +3,7 @@
 [![license](https://img.shields.io/npm/l/gib-runs.svg)](https://github.com/levouinse/gib-runs/blob/main/LICENSE)
 [![tests](https://img.shields.io/badge/tests-32%20passing-brightgreen.svg)](https://github.com/levouinse/gib-runs)
 
-# 🚀 GIB-RUNS
+# 🚀 GIB-RUNS v2.3.4
 
 **Modern development server with live reload - Unlike some people, this actually runs on merit, not connections.**
 
@@ -60,6 +60,15 @@ The name is a playful nod to Indonesia's Vice President Gibran Rakabuming Raka, 
 - ⚡ **Performance Monitoring** - Track slow requests and optimize (actual performance metrics)
 - 🚦 **Rate Limiting** - Protect against abuse (better protection than family connections)
 - 🌐 **Network Access** - True network binding that actually works (unlike some political promises)
+
+### New in v2.3.4 🎉
+- 🔁 **Auto-Restart on Crash** - Automatically restart server on unexpected errors (resilient mode)
+- 📤 **File Upload Endpoint** - Built-in file upload support for development (POST to /upload)
+- 💚 **Health Check Endpoint** - Monitor server health and statistics (GET /health)
+- 📝 **Request Logging to File** - Log all requests to file for debugging (gib-runs.log)
+- 🎨 **Custom Error Pages** - Beautiful, informative error pages with stack traces
+- 🌍 **Environment Variables** - Automatic .env file loading (dotenv support)
+- 📡 **WebSocket Broadcasting** - Send custom messages to all connected clients
 
 ## 📦 Installation
 
@@ -155,6 +164,11 @@ gib-runs dist --port=3000 --spa --cors --no-browser
 | `--npm-script=SCRIPT` | Run npm script (dev, start, etc) | None |
 | `--pm2` | Use PM2 process manager | `false` |
 | `--pm2-name=NAME` | PM2 app name | `gib-runs-app` |
+| `--auto-restart` | Auto-restart server on crash | `false` |
+| `--enable-upload` | Enable file upload endpoint | `false` |
+| `--no-health` | Disable health check endpoint | `false` |
+| `--log-to-file` | Log requests to file | `false` |
+| `--no-error-page` | Disable custom error pages | `false` |
 | `-v, --version` | Show version | - |
 | `-h, --help` | Show help | - |
 
@@ -372,7 +386,7 @@ gib-runs
 Network URLs are **ALWAYS shown automatically** when you start the server:
 
 ```
-🚀 GIB-RUNS v2.3.2
+🚀 GIB-RUNS v2.3.4
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -491,7 +505,7 @@ gib-runs --tunnel-service=tunnelto
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.3.2
+🚀 GIB-RUNS v2.3.4
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -621,7 +635,7 @@ pm2 list
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.3.2
+🚀 GIB-RUNS v2.3.4
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -647,6 +661,271 @@ pm2 list
 ```
 
 **Unlike Gibran's career, these processes run on actual merit and capability!** 🔥
+
+## 🆕 New Features in v2.3.4
+
+### Auto-Restart on Crash
+
+**Automatically restart your server when it crashes - resilient mode for development!**
+
+```bash
+# Enable auto-restart
+gib-runs --auto-restart
+
+# With other options
+gib-runs --auto-restart --port=3000 --spa
+```
+
+**How it works:**
+- Server automatically restarts on unexpected errors
+- Attempts up to 5 restarts before giving up
+- Shows restart attempt count in console
+- Perfect for unstable development environments
+- Keeps your workflow uninterrupted
+
+**Example output:**
+```
+  ✖ Server Error: ECONNRESET
+  🔄 Auto-restarting server (attempt 1/5)...
+  ✓ Server restarted successfully
+```
+
+### File Upload Endpoint
+
+**Built-in file upload support for development - no need for separate upload server!**
+
+```bash
+# Enable file upload endpoint
+gib-runs --enable-upload
+
+# Files will be saved to ./uploads directory
+```
+
+**Usage:**
+```html
+<!-- HTML Form -->
+<form action="/upload" method="POST" enctype="multipart/form-data">
+  <input type="file" name="file">
+  <button type="submit">Upload</button>
+</form>
+```
+
+```javascript
+// JavaScript Fetch API
+const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+
+fetch('/upload', {
+  method: 'POST',
+  body: formData
+})
+.then(res => res.json())
+.then(data => {
+  console.log('Uploaded:', data.file);
+  // { filename: 'file-123456789.jpg', originalname: 'photo.jpg', size: 12345, path: '/path/to/uploads/...' }
+});
+```
+
+**Features:**
+- 10MB file size limit
+- Files saved to `./uploads` directory
+- Automatic directory creation
+- Unique filenames with timestamp
+- JSON response with file details
+- Error handling for invalid uploads
+
+### Health Check Endpoint
+
+**Monitor your server health and statistics - transparency in action!**
+
+```bash
+# Health check is enabled by default
+gib-runs
+
+# Disable if needed
+gib-runs --no-health
+```
+
+**Access health endpoint:**
+```bash
+# Via curl
+curl http://localhost:8080/health
+
+# Or in browser
+http://localhost:8080/health
+```
+
+**Response example:**
+```json
+{
+  "status": "healthy",
+  "uptime": 123.45,
+  "timestamp": "2026-02-12T09:00:00.000Z",
+  "server": {
+    "requests": 42,
+    "reloads": 5,
+    "memory": {
+      "rss": "45MB",
+      "heapUsed": "23MB",
+      "heapTotal": "35MB"
+    }
+  },
+  "system": {
+    "platform": "linux",
+    "arch": "x64",
+    "cpus": 8,
+    "freemem": "2048MB",
+    "totalmem": "16384MB",
+    "loadavg": [1.2, 1.5, 1.8]
+  }
+}
+```
+
+**Use cases:**
+- Monitor server performance
+- Debug memory leaks
+- Track request patterns
+- Integration with monitoring tools
+- Health checks for Docker containers
+
+### Request Logging to File
+
+**Log all requests to file for debugging - transparent and verifiable!**
+
+```bash
+# Enable file logging
+gib-runs --log-to-file
+
+# Logs saved to gib-runs.log in project root
+```
+
+**Log format (JSON):**
+```json
+{"timestamp":"2026-02-12T09:00:00.000Z","method":"GET","url":"/index.html","ip":"127.0.0.1","userAgent":"Mozilla/5.0...","status":200,"duration":"5ms"}
+{"timestamp":"2026-02-12T09:00:01.000Z","method":"GET","url":"/style.css","ip":"127.0.0.1","userAgent":"Mozilla/5.0...","status":200,"duration":"2ms"}
+```
+
+**Features:**
+- JSON format for easy parsing
+- Includes timestamp, method, URL, IP, user-agent, status, duration
+- Automatic log rotation at 10MB
+- Old logs backed up with timestamp
+- Perfect for debugging and analytics
+
+**Parse logs with jq:**
+```bash
+# Show all 404 errors
+cat gib-runs.log | jq 'select(.status == 404)'
+
+# Show slow requests (>100ms)
+cat gib-runs.log | jq 'select(.duration | tonumber > 100)'
+
+# Count requests by URL
+cat gib-runs.log | jq -r '.url' | sort | uniq -c
+```
+
+### Custom Error Pages
+
+**Beautiful, informative error pages - unlike some political errors!**
+
+```bash
+# Custom error pages enabled by default
+gib-runs
+
+# Disable if needed
+gib-runs --no-error-page
+```
+
+**Features:**
+- Modern gradient design
+- Detailed error information
+- Shows error stack trace in development mode
+- Covers all HTTP error codes (400, 401, 403, 404, 500, etc)
+- Responsive design for mobile devices
+- "Back to Home" button
+- Professional appearance
+
+**Error codes covered:**
+- 400 Bad Request
+- 401 Unauthorized
+- 403 Forbidden
+- 404 Not Found
+- 405 Method Not Allowed
+- 500 Internal Server Error
+- 502 Bad Gateway
+- 503 Service Unavailable
+
+### Environment Variables
+
+**Automatic .env file loading - no configuration needed!**
+
+```bash
+# Just create .env file in project root
+echo "API_KEY=your-secret-key" > .env
+echo "DATABASE_URL=postgres://localhost/mydb" >> .env
+
+# Start server (automatically loads .env)
+gib-runs
+```
+
+**Access in your code:**
+```javascript
+// Node.js
+const apiKey = process.env.API_KEY;
+const dbUrl = process.env.DATABASE_URL;
+
+console.log('API Key:', apiKey);
+console.log('Database:', dbUrl);
+```
+
+**Features:**
+- Automatic loading on server start
+- No configuration needed
+- Uses dotenv package
+- Perfect for API keys, database URLs, etc
+- Keeps secrets out of version control
+
+### WebSocket Broadcasting API
+
+**Send custom messages to all connected clients - programmatic control!**
+
+```javascript
+const gibRuns = require('gib-runs');
+
+// Start server
+const server = gibRuns.start({
+  port: 8080,
+  root: './public'
+});
+
+// Broadcast custom message to all clients
+gibRuns.broadcast('custom-reload');
+
+// Trigger reload from your build script
+gibRuns.broadcast('reload');
+
+// Send custom data
+gibRuns.broadcast(JSON.stringify({ type: 'notification', message: 'Build complete!' }));
+```
+
+**Use cases:**
+- Custom build tool integration
+- Trigger reload from external scripts
+- Send notifications to browser
+- Custom live reload logic
+- Integration with CI/CD pipelines
+
+**Client-side handling:**
+```javascript
+// In your HTML/JavaScript
+const ws = new WebSocket('ws://localhost:8080');
+ws.onmessage = function(event) {
+  if (event.data === 'custom-reload') {
+    console.log('Custom reload triggered!');
+    location.reload();
+  }
+};
+```
 
 ## 🐛 Troubleshooting
 

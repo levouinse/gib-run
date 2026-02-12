@@ -14,7 +14,15 @@ var fs = require('fs'),
 	chokidar = require('chokidar'),
 	chalk = require('chalk');
 
+// Load environment variables from .env file
+try {
+	require('dotenv').config({ path: path.join(process.cwd(), '.env') });
+} catch (e) {
+	// dotenv not available, skip
+}
+
 var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
+var packageJson = require('./package.json');
 
 var GibRuns = {
 	server: null,
@@ -24,7 +32,10 @@ var GibRuns = {
 	requestCount: 0,
 	reloadCount: 0,
 	tunnel: null,
-	processRunner: null
+	processRunner: null,
+	wsClients: [],
+	autoRestart: false,
+	restartCount: 0
 };
 
 function escape(html){
@@ -136,6 +147,11 @@ function entryPoint(staticHandler, file) {
  * @param compression {boolean} Enable gzip compression (default: true)
  * @param qrCode {boolean} Show QR code for network URLs (default: false)
  * @param tunnel {boolean} Create public tunnel URL (default: false)
+ * @param autoRestart {boolean} Auto-restart server on crash (default: false)
+ * @param enableUpload {boolean} Enable file upload endpoint (default: false)
+ * @param enableHealth {boolean} Enable health check endpoint (default: true)
+ * @param logToFile {boolean} Log requests to file (default: false)
+ * @param customErrorPage {boolean} Use custom error pages (default: true)
  */
 GibRuns.start = function(options) {
 	options = options || {};
@@ -177,6 +193,13 @@ GibRuns.start = function(options) {
 	var usePM2 = options.pm2 || false;
 	var pm2Name = options.pm2Name || 'gib-runs-app';
 	var testMode = options.test || false;
+	var autoRestart = options.autoRestart || false;
+	var enableUpload = options.enableUpload || false;
+	var enableHealth = options.enableHealth !== false;
+	var logToFile = options.logToFile || false;
+	var customErrorPage = options.customErrorPage !== false;
+	
+	GibRuns.autoRestart = autoRestart;
 
 	if (httpsModule) {
 		try {
@@ -217,6 +240,27 @@ GibRuns.start = function(options) {
 			
 			next();
 		});
+		
+		// Add health check endpoint
+		if (enableHealth) {
+			app.use(require('./middleware/health')(GibRuns));
+		}
+		
+		// Add file upload endpoint
+		if (enableUpload) {
+			app.use(require('./middleware/upload')());
+			if (GibRuns.logLevel >= 1) {
+				console.log(chalk.cyan('  📤 File Upload: ') + chalk.green('Enabled') + chalk.gray(' (POST to /upload)'));
+			}
+		}
+		
+		// Add request logger to file
+		if (logToFile) {
+			app.use(require('./middleware/logger')({ logFile: path.join(root, 'gib-runs.log') }));
+			if (GibRuns.logLevel >= 1) {
+				console.log(chalk.cyan('  📝 File Logging: ') + chalk.green('Enabled') + chalk.gray(' (gib-runs.log)'));
+			}
+		}
 
 		// Add logger. Level 2 logs only errors
 		if (GibRuns.logLevel === 2) {
@@ -298,6 +342,11 @@ GibRuns.start = function(options) {
 		app.use(staticServerHandler) // Custom static server
 			.use(entryPoint(staticServerHandler, file))
 			.use(serveIndex(root, { icons: true }));
+		
+		// Add custom error page handler (must be last)
+		if (customErrorPage) {
+			app.use(require('./middleware/error-page')({ showStack: GibRuns.logLevel >= 2 }));
+		}
 	}
 
 	var server, protocol;
@@ -338,7 +387,17 @@ GibRuns.start = function(options) {
 			if (GibRuns.logLevel >= 3) {
 				console.error(chalk.gray('  Stack trace:'), e.stack);
 			}
-			GibRuns.shutdown();
+			
+			// Auto-restart on crash if enabled
+			if (autoRestart && GibRuns.restartCount < 5) {
+				GibRuns.restartCount++;
+				console.log(chalk.yellow('  🔄 Auto-restarting server (attempt ' + GibRuns.restartCount + '/5)...'));
+				setTimeout(function() {
+					GibRuns.start(options);
+				}, 2000);
+			} else {
+				GibRuns.shutdown();
+			}
 		}
 	});
 
@@ -353,7 +412,7 @@ GibRuns.start = function(options) {
 			// Show info about what's running
 			if (GibRuns.logLevel >= 1) {
 				console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
-				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.2'));
+				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
 				console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 				console.log(chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
@@ -367,6 +426,9 @@ GibRuns.start = function(options) {
 					console.log(chalk.white('  🔄 PM2:        ') + chalk.green(' Enabled') + chalk.gray(' (process manager)'));
 				}
 				console.log(chalk.white('  🔄 Live Reload:') + chalk.green(' Enabled') + chalk.gray(' (watching for changes)'));
+				if (autoRestart) {
+					console.log(chalk.white('  🔁 Auto-Restart:') + chalk.green(' Enabled') + chalk.gray(' (resilient mode)'));
+				}
 				console.log(chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.gray('  Press Ctrl+C to stop\n'));
 			}
@@ -443,7 +505,7 @@ GibRuns.start = function(options) {
 		// Output with beautiful formatting
 		if (GibRuns.logLevel >= 1) {
 			console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
-			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v2.3.2'));
+			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
 			console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
@@ -465,6 +527,12 @@ GibRuns.start = function(options) {
 			}
 			if (https) {
 				console.log(chalk.white('  🔒 HTTPS:      ') + chalk.green(' Enabled') + chalk.gray(' (real security)'));
+			}
+			if (enableHealth) {
+				console.log(chalk.white('  💚 Health:     ') + chalk.green(' Enabled') + chalk.gray(' (GET /health)'));
+			}
+			if (autoRestart) {
+				console.log(chalk.white('  🔁 Auto-Restart:') + chalk.green(' Enabled') + chalk.gray(' (resilient mode)'));
 			}
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.gray('  Press Ctrl+C to stop'));
@@ -540,6 +608,7 @@ GibRuns.start = function(options) {
 		};
 
 		clients.push(ws);
+		GibRuns.wsClients = clients;
 	});
 
 	var ignored = [
@@ -597,6 +666,22 @@ GibRuns.start = function(options) {
 		});
 
 	return server;
+};
+
+/**
+ * Broadcast custom message to all connected WebSocket clients
+ * @param {string} message - Message to broadcast
+ */
+GibRuns.broadcast = function(message) {
+	if (GibRuns.wsClients && GibRuns.wsClients.length > 0) {
+		GibRuns.wsClients.forEach(function(ws) {
+			if (ws && ws.send) {
+				ws.send(message);
+			}
+		});
+		return true;
+	}
+	return false;
 };
 
 GibRuns.shutdown = function() {
