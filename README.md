@@ -3,7 +3,7 @@
 [![license](https://img.shields.io/npm/l/gib-runs.svg)](https://github.com/levouinse/gib-runs/blob/main/LICENSE)
 [![tests](https://img.shields.io/badge/tests-32%20passing-brightgreen.svg)](https://github.com/levouinse/gib-runs)
 
-# 🚀 GIB-RUNS v2.3.6
+# 🚀 GIB-RUNS v2.3.7
 
 **Modern development server with live reload - Unlike some people, this actually runs on merit, not connections.**
 
@@ -61,10 +61,13 @@ The name is a playful nod to Indonesia's Vice President Gibran Rakabuming Raka, 
 - 🚦 **Rate Limiting** - Protect against abuse (better protection than family connections)
 - 🌐 **Network Access** - True network binding that actually works (unlike some political promises)
 
-### New in v2.3.6 🎉
-- 🔄 **Environment Variable Replacement** - Automatic replacement of `${VAR_NAME}` in HTML files from .env
+### New in v2.3.7 🎉
+- 📁 **Project-Level Config File** - `.gib-runs.json` in project root (overrides global config)
+- 🎯 **Improved Watch Ignore** - Auto-ignore common directories (node_modules, dist, build, etc)
+- ⚡ **Enhanced File Watching** - Better stability with awaitWriteFinish option
 
 ### New in v2.3.6 🎉
+- 🔄 **Environment Variable Replacement** - Automatic replacement of `${VAR_NAME}` in HTML files from .env
 - 🔁 **Auto-Restart on Crash** - Automatically restart server on unexpected errors (resilient mode)
 - 📤 **File Upload Endpoint** - Built-in file upload support for development (POST to /upload)
 - 💚 **Health Check Endpoint** - Monitor server health and statistics (GET /health)
@@ -226,7 +229,7 @@ const server = gibRun.start({
 
 ### Configuration File
 
-Create `~/.gib-runs.json` for default settings:
+Create `~/.gib-runs.json` for global default settings:
 
 ```json
 {
@@ -238,6 +241,20 @@ Create `~/.gib-runs.json` for default settings:
   "cors": false
 }
 ```
+
+Or create `.gib-runs.json` in your project root for project-specific settings (overrides global config):
+
+```json
+{
+  "port": 3000,
+  "spa": true,
+  "watch": ["src", "public"],
+  "ignore": ["*.test.js", "*.spec.js"],
+  "middleware": ["performance", "security"]
+}
+```
+
+**Priority**: Project config > Global config > CLI arguments > Defaults
 
 ## 🔒 HTTPS Configuration
 
@@ -389,7 +406,7 @@ gib-runs
 Network URLs are **ALWAYS shown automatically** when you start the server:
 
 ```
-🚀 GIB-RUNS v2.3.6
+🚀 GIB-RUNS v2.3.7
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -508,7 +525,7 @@ gib-runs --tunnel-service=tunnelto
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.3.6
+🚀 GIB-RUNS v2.3.7
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
@@ -638,7 +655,7 @@ pm2 list
 ### Example Output
 
 ```
-🚀 GIB-RUNS v2.3.6
+🚀 GIB-RUNS v2.3.7
 "Unlike Gibran, this actually works through merit"
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project

@@ -627,6 +627,9 @@ GibRuns.start = function(options) {
 		},
 		function(testPath) { // Ignore common build artifacts
 			return /\.(log|lock|tmp)$/.test(testPath);
+		},
+		function(testPath) { // Ignore common directories
+			return /(^|\/)((node_modules|\.git|dist|build|coverage|\.next|\.nuxt|\.output|out|target)(\/|$))/.test(testPath);
 		}
 	];
 	if (options.ignore) {
@@ -638,7 +641,12 @@ GibRuns.start = function(options) {
 	// Setup file watcher
 	GibRuns.watcher = chokidar.watch(watchPaths, {
 		ignored: ignored,
-		ignoreInitial: true
+		ignoreInitial: true,
+		ignorePermissionErrors: true,
+		awaitWriteFinish: {
+			stabilityThreshold: 100,
+			pollInterval: 50
+		}
 	});
 	function handleChange(changePath) {
 		GibRuns.reloadCount++;

@@ -23,6 +23,14 @@ if (fs.existsSync(configPath)) {
 	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
 }
 
+// Project-level config (overrides global config)
+var projectConfigPath = path.join(process.cwd(), '.gib-runs.json');
+if (fs.existsSync(projectConfigPath)) {
+	var projectConfig = fs.readFileSync(projectConfigPath, 'utf8');
+	assign(opts, JSON.parse(projectConfig));
+	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
+}
+
 for (var i = process.argv.length - 1; i >= 2; --i) {
 	var arg = process.argv[i];
 	if (arg.indexOf("--port=") > -1) {

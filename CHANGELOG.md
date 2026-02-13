@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.7] - 2026-02-13
+
+### Added
+- 📁 **Project-Level Config File** - Support for `.gib-runs.json` in project root
+  - Overrides global config (`~/.gib-runs.json`)
+  - Priority: Project config > Global config > CLI args > Defaults
+  - Perfect for team-shared project settings
+- 🎯 **Improved Watch Ignore Patterns** - Better file watching performance
+  - Auto-ignore common directories: `node_modules`, `.git`, `dist`, `build`, `coverage`, `.next`, `.nuxt`, `.output`, `out`, `target`
+  - Prevents unnecessary reloads from build artifacts
+  - Reduces CPU usage during development
+- ⚡ **Enhanced File Watching Stability** - More reliable change detection
+  - Added `awaitWriteFinish` option to prevent partial file reads
+  - Ignores permission errors automatically
+  - Debounced file changes for better performance
+
 ## [2.3.6] - 2026-02-12
 
 ### Added

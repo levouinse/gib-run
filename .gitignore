@@ -119,3 +119,6 @@ test-demo/
 transform.sh
 apply_changes.py
 
+# Config files (keep example)
+.gib-runs.json
+
