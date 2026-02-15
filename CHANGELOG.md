@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2026-02-15
+
+### Added
+- 📜 **Request History Tracking** - New `/history` endpoint
+  - Tracks last 50 HTTP requests with full details
+  - Includes timestamp, method, URL, status, duration, and IP
+  - Perfect for debugging and monitoring
+- 📊 **Detailed File Change Notifications** - Enhanced file watching
+  - Shows file size on changes: `File changed: app.js (12.45KB)`
+  - Separate notifications for file add/delete events
+  - ➕ File added (logLevel >= 2)
+  - ➖ File deleted (logLevel >= 2)
+- 📝 **Comprehensive Logging** - Complete request and error logging
+  - All requests logged with timestamp and IP address
+  - Consistent ISO 8601 timestamps across all logs
+  - Works in static, npm-script, and exec modes
+
+### Changed
+- 🔧 **Improved Error Handling** - Better error messages with timestamps
+  - Server errors include timestamp and stack trace
+  - Process errors in npm/exec mode properly logged
+  - Watcher errors show detailed information
+- ⚡ **Enhanced Process Runner** - Better npm-script and exec mode
+  - Stderr properly captured and logged with timestamps
+  - Exit codes and signals logged with context
+  - Cleaner output formatting
+
 ## [2.3.8] - 2026-02-15
 
 ### Changed

@@ -1,14 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-module.exports = function(options) {
-	options = options || {};
+module.exports = (options = {}) => {
 	const logFile = options.logFile || path.join(process.cwd(), 'gib-runs.log');
 	const maxSize = options.maxSize || 10 * 1024 * 1024;
 	
 	let logStream = fs.createWriteStream(logFile, { flags: 'a' });
 	
-	function checkRotate() {
+	const checkRotate = () => {
 		try {
 			const stats = fs.statSync(logFile);
 			if (stats.size > maxSize) {
@@ -17,9 +16,9 @@ module.exports = function(options) {
 				logStream = fs.createWriteStream(logFile, { flags: 'a' });
 			}
 		} catch (e) {}
-	}
+	};
 	
-	return function(req, res, next) {
+	return (req, res, next) => {
 		const start = Date.now();
 		const logEntry = {
 			timestamp: new Date().toISOString(),

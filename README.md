@@ -4,19 +4,19 @@
 [![npm downloads](https://img.shields.io/npm/dm/gib-runs.svg)](https://www.npmjs.org/package/gib-runs)
 [![license](https://img.shields.io/npm/l/gib-runs.svg)](https://github.com/levouinse/gib-runs/blob/main/LICENSE)
 
-Modern development server with live reload and hot module replacement. Built for developers who value merit over connections.
+A modern development server with live reload and hot module replacement. Built for developers who value capability over connections.
 
-> *"Unlike some people, this actually runs on capability, not nepotism."*
+> *"Unlike some people, this actually runs on merit, not nepotism."*
 
 ## Why GIB-RUNS?
 
-The name playfully references Indonesia's Vice President Gibran Rakabuming Raka, who got his position thanks to his father, President Joko Widodo. But unlike certain political figures, this server:
+Named after Indonesia's Vice President Gibran Rakabuming Raka, who got his position through family connections. But unlike certain political figures, this server:
 
-- ✅ Earned its position through actual features
-- ✅ Works hard without shortcuts
+- ✅ Earned its position through real features
+- ✅ Works without shortcuts or special treatment
 - ✅ Serves everyone equally
-- ✅ Transparent about what it does
-- ✅ Performance based on real metrics
+- ✅ Transparent and honest about what it does
+- ✅ Performance based on actual metrics
 
 *"When your dev server has more integrity than some vice presidents."*
 
@@ -26,6 +26,8 @@ The name playfully references Indonesia's Vice President Gibran Rakabuming Raka,
 - ⚡ **Hot CSS Injection** - Update styles without full page reload
 - 🎨 **Beautiful UI** - Modern status indicator with real-time feedback
 - 📊 **Performance Monitoring** - Track requests, reloads, and uptime
+- 📝 **Comprehensive Logging** - All requests, errors, and file changes with timestamps and file sizes
+- 📜 **Request History** - Track last 50 requests via `/history` endpoint
 - 🗜️ **Compression** - Built-in gzip compression
 - 🔒 **HTTPS/HTTP2** - Secure development with modern protocols
 - 🌐 **CORS Support** - Easy cross-origin development
@@ -34,7 +36,7 @@ The name playfully references Indonesia's Vice President Gibran Rakabuming Raka,
 - 🔌 **Proxy Support** - Proxy API requests during development
 - 📦 **Middleware** - Extend functionality with custom middleware
 - 🎭 **Mount Directories** - Serve multiple directories on different routes
-- 🚀 **NPM Scripts** - Run npm dev, start, or any script alongside server
+- 🚀 **NPM Scripts** - Run npm scripts alongside the server
 - 🔄 **PM2 Integration** - Production-ready process management
 - 🌍 **Public Tunnels** - Share your dev server with anyone, anywhere
 - 📱 **Multi-Device** - Access from any device on your network
@@ -68,44 +70,16 @@ gib-runs --spa
 gib-runs --https=./config/https.conf.js
 ```
 
-## CLI Options
+## Common Use Cases
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--port=NUMBER` | Port to use | `8080` |
-| `--host=ADDRESS` | Address to bind to | `0.0.0.0` |
-| `--open=PATH` | Path to open in browser | `/` |
-| `--no-browser` | Suppress browser launch | `false` |
-| `-q, --quiet` | Suppress logging | `false` |
-| `-V, --verbose` | Verbose logging | `false` |
-| `--watch=PATH` | Paths to watch (comma-separated) | All files |
-| `--ignore=PATH` | Paths to ignore (comma-separated) | None |
-| `--no-css-inject` | Reload page on CSS change | `false` |
-| `--spa` | Single Page App mode | `false` |
-| `--cors` | Enable CORS | `false` |
-| `--https=PATH` | HTTPS config module | None |
-| `--proxy=ROUTE:URL` | Proxy requests | None |
-| `--middleware=PATH` | Custom middleware | None |
-| `--htpasswd=PATH` | HTTP auth file | None |
-| `--tunnel` | Create public tunnel | `false` |
-| `--tunnel-service=NAME` | Tunnel service (lt, cf, ngrok) | `localtunnel` |
-| `--npm-script=SCRIPT` | Run npm script (dev, start, etc) | None |
-| `--exec=COMMAND` | Run custom command | None |
-| `--pm2` | Use PM2 process manager | `false` |
-| `--auto-restart` | Auto-restart server on crash | `false` |
-| `--enable-upload` | Enable file upload endpoint | `false` |
-| `--log-to-file` | Log requests to file | `false` |
-
-## Usage Examples
-
-### Basic Server
+### Basic Development Server
 
 ```bash
-# Serve current directory on port 8080
+# Serve current directory with live reload
 gib-runs
 
-# Serve with custom port
-gib-runs --port=3000
+# Custom port and verbose logging
+gib-runs --port=3000 --verbose
 
 # Serve specific directory
 gib-runs ./public
@@ -117,7 +91,7 @@ gib-runs ./public
 # SPA mode (redirects all routes to index.html)
 gib-runs --spa
 
-# With custom port
+# SPA with custom port
 gib-runs --spa --port=8000
 ```
 
@@ -147,7 +121,7 @@ gib-runs --mount=/static:./assets --mount=/lib:./node_modules
 # Run npm dev script with live reload
 gib-runs --npm-script=dev
 
-# Run with PM2
+# Run with PM2 process manager
 gib-runs --npm-script=dev --pm2
 
 # Run custom command
@@ -163,7 +137,7 @@ gib-runs --tunnel
 # Use Cloudflare Tunnel
 gib-runs --tunnel-service=cloudflared
 
-# Use Ngrok
+# Use Ngrok (requires auth token)
 gib-runs --tunnel-service=ngrok --tunnel-authtoken=YOUR_TOKEN
 ```
 
@@ -187,15 +161,33 @@ Then run:
 gib-runs --https=./https.conf.js
 ```
 
-### HTTP Authentication
+## CLI Options
 
-```bash
-# Create htpasswd file
-htpasswd -c .htpasswd username
-
-# Use it
-gib-runs --htpasswd=.htpasswd
-```
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--port=NUMBER` | Port to use | `8080` |
+| `--host=ADDRESS` | Address to bind to | `0.0.0.0` |
+| `--open=PATH` | Path to open in browser | `/` |
+| `--no-browser` | Suppress browser launch | `false` |
+| `-q, --quiet` | Suppress logging | `false` |
+| `-V, --verbose` | Verbose logging | `false` |
+| `--watch=PATH` | Paths to watch (comma-separated) | All files |
+| `--ignore=PATH` | Paths to ignore (comma-separated) | None |
+| `--no-css-inject` | Reload page on CSS change | `false` |
+| `--spa` | Single Page App mode | `false` |
+| `--cors` | Enable CORS | `false` |
+| `--https=PATH` | HTTPS config module | None |
+| `--proxy=ROUTE:URL` | Proxy requests | None |
+| `--middleware=PATH` | Custom middleware | None |
+| `--htpasswd=PATH` | HTTP auth file | None |
+| `--tunnel` | Create public tunnel | `false` |
+| `--tunnel-service=NAME` | Tunnel service (lt, cf, ngrok) | `localtunnel` |
+| `--npm-script=SCRIPT` | Run npm script | None |
+| `--exec=COMMAND` | Run custom command | None |
+| `--pm2` | Use PM2 process manager | `false` |
+| `--auto-restart` | Auto-restart server on crash | `false` |
+| `--enable-upload` | Enable file upload endpoint | `false` |
+| `--log-to-file` | Log requests to file | `false` |
 
 ## Node.js API
 
@@ -263,9 +255,36 @@ Or `.gib-runs.json` in your project root (overrides global config):
 }
 ```
 
-**Priority**: Project config > Global config > CLI arguments > Defaults
+**Priority**: CLI arguments > Project config > Global config > Defaults
 
 ## Advanced Features
+
+### Request History
+
+Track all HTTP requests for debugging:
+
+```bash
+# View request history
+curl http://localhost:8080/history
+```
+
+Response:
+
+```json
+{
+  "total": 10,
+  "requests": [
+    {
+      "timestamp": "2026-02-15T06:09:17.875Z",
+      "method": "GET",
+      "url": "/index.html",
+      "status": 200,
+      "duration": "5ms",
+      "ip": "127.0.0.1"
+    }
+  ]
+}
+```
 
 ### Environment Variables
 
@@ -357,7 +376,7 @@ cat gib-runs.log | jq 'select(.duration | tonumber > 100)'
 Create `middleware/custom.js`:
 
 ```javascript
-module.exports = function(req, res, next) {
+module.exports = (req, res, next) => {
   console.log('Request:', req.url);
   next();
 };
@@ -379,7 +398,6 @@ Server automatically binds to `0.0.0.0` and shows all network URLs:
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080
   🔗 Network:    http://192.168.1.100:8080
-  🔗 Network:    http://10.0.0.5:8080
   🔄 Live Reload: Enabled
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```

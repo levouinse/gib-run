@@ -1,27 +1,27 @@
 #!/usr/bin/env node
-var fs = require('fs'),
-	connect = require('connect'),
-	serveIndex = require('serve-index'),
-	logger = require('morgan'),
-	WebSocket = require('faye-websocket'),
-	path = require('path'),
-	http = require('http'),
-	send = require('send'),
-	open = require('open'),
-	es = require("event-stream"),
-	compression = require('compression'),
-	os = require('os'),
-	chokidar = require('chokidar'),
-	chalk = require('chalk');
+const fs = require('fs');
+const connect = require('connect');
+const serveIndex = require('serve-index');
+const logger = require('morgan');
+const WebSocket = require('faye-websocket');
+const path = require('path');
+const http = require('http');
+const send = require('send');
+const open = require('open');
+const es = require('event-stream');
+const compression = require('compression');
+const os = require('os');
+const chokidar = require('chokidar');
+const chalk = require('chalk');
 
 try {
 	require('dotenv').config({ path: path.join(process.cwd(), '.env') });
 } catch (e) {}
 
-var INJECTED_CODE = fs.readFileSync(path.join(__dirname, "injected.html"), "utf8");
-var packageJson = require('./package.json');
+const INJECTED_CODE = fs.readFileSync(path.join(__dirname, 'injected.html'), 'utf8');
+const packageJson = require('./package.json');
 
-var GibRuns = {
+const GibRuns = {
 	server: null,
 	watcher: null,
 	logLevel: 2,
@@ -35,81 +35,76 @@ var GibRuns = {
 	restartCount: 0
 };
 
-function escape(html){
-	return String(html)
-		.replace(/&(?!\w+;)/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
-}
+const escape = (html) => String(html)
+	.replace(/&(?!\w+;)/g, '&amp;')
+	.replace(/</g, '&lt;')
+	.replace(/>/g, '&gt;')
+	.replace(/"/g, '&quot;');
 
-// Based on connect.static(), but streamlined and with added code injecter
 function staticServer(root) {
-	var isFile = false;
-	try { // For supporting mounting files instead of just directories
+	let isFile = false;
+	try {
 		isFile = fs.statSync(root).isFile();
 	} catch (e) {
-		if (e.code !== "ENOENT") throw e;
+		if (e.code !== 'ENOENT') throw e;
 	}
-	return function(req, res, next) {
-		if (req.method !== "GET" && req.method !== "HEAD") return next();
-		var reqpath = isFile ? "" : new URL(req.url, 'http://localhost').pathname;
-		var hasNoOrigin = !req.headers.origin;
-		var injectCandidates = [ new RegExp("</body>", "i"), new RegExp("</svg>"), new RegExp("</head>", "i")];
-		var injectTag = null;
 
-		function directory() {
-			var pathname = new URL(req.originalUrl, 'http://localhost').pathname;
+	return (req, res, next) => {
+		if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+		
+		const reqpath = isFile ? '' : new URL(req.url, 'http://localhost').pathname;
+		const hasNoOrigin = !req.headers.origin;
+		const injectCandidates = [/<\/body>/i, /<\/svg>/i, /<\/head>/i];
+		let injectTag = null;
+
+		const directory = () => {
+			const pathname = new URL(req.originalUrl, 'http://localhost').pathname;
 			res.statusCode = 301;
 			res.setHeader('Location', pathname + '/');
 			res.end('Redirecting to ' + escape(pathname) + '/');
-		}
+		};
 
-		function file(filepath /*, stat*/) {
-			var x = path.extname(filepath).toLocaleLowerCase(), match,
-					possibleExtensions = [ "", ".html", ".htm", ".xhtml", ".php", ".svg" ];
-			if (hasNoOrigin && (possibleExtensions.indexOf(x) > -1)) {
-				// TODO: Sync file read here is not nice, but we need to determine if the html should be injected or not
-				var contents = fs.readFileSync(filepath, "utf8");
-				for (var i = 0; i < injectCandidates.length; ++i) {
-					match = injectCandidates[i].exec(contents);
-					if (match) {
-						injectTag = match[0];
-						break;
-					}
-				}
-				if (injectTag === null && GibRuns.logLevel >= 3) {
-					console.warn(chalk.yellow("⚠ Failed to inject refresh script!"),
-						"Couldn't find any of the tags", injectCandidates, "from", filepath);
+		const file = (filepath) => {
+			const ext = path.extname(filepath).toLowerCase();
+			const injectableExts = ['', '.html', '.htm', '.xhtml', '.php', '.svg'];
+			
+			if (hasNoOrigin && injectableExts.includes(ext)) {
+				const contents = fs.readFileSync(filepath, 'utf8');
+				const match = injectCandidates.find(regex => regex.test(contents));
+				
+				if (match) {
+					injectTag = contents.match(match)[0];
+				} else if (GibRuns.logLevel >= 3) {
+					console.warn(chalk.yellow('⚠ Failed to inject refresh script!'),
+						"Couldn't find any of the tags", injectCandidates, 'from', filepath);
 				}
 			}
-		}
+		};
 
-		function error(err) {
+		const error = (err) => {
 			if (err.status === 404) return next();
 			next(err);
-		}
+		};
 
-		function inject(stream) {
+		const inject = (stream) => {
 			if (injectTag) {
-				// We need to modify the length given to browser
-				var len = INJECTED_CODE.length + res.getHeader('Content-Length');
+				const len = INJECTED_CODE.length + res.getHeader('Content-Length');
 				res.setHeader('Content-Length', len);
-				var originalPipe = stream.pipe;
-				stream.pipe = function(resp) {
-					// Replace environment variables ${VAR_NAME} with actual values
-					var envReplacer = es.mapSync(function(data) {
-						return data.toString().replace(/\$\{([^}]+)\}/g, function(match, varName) {
-							return process.env[varName] || '';
-						});
-					});
-					var codeInject = es.replace(new RegExp(injectTag, "i"), INJECTED_CODE + injectTag);
+				const originalPipe = stream.pipe;
+				
+				stream.pipe = (resp) => {
+					const envReplacer = es.mapSync((data) => 
+						data.toString().replace(/\$\{([^}]+)\}/g, (match, varName) => 
+							process.env[varName] || ''
+						)
+					);
+					const codeInject = es.replace(new RegExp(injectTag, 'i'), INJECTED_CODE + injectTag);
 					originalPipe.call(stream, envReplacer).pipe(codeInject).pipe(resp);
 				};
 			}
-		}
+		};
 
-		send(req, reqpath, { root: root })
+		send(req, reqpath, { root })
 			.on('error', error)
 			.on('directory', directory)
 			.on('file', file)
@@ -118,16 +113,11 @@ function staticServer(root) {
 	};
 }
 
-/**
- * Rewrite request URL and pass it back to the static handler.
- * @param staticHandler {function} Next handler
- * @param file {string} Path to the entry point file
- */
 function entryPoint(staticHandler, file) {
-	if (!file) return function(req, res, next) { next(); };
+	if (!file) return (req, res, next) => next();
 
-	return function(req, res, next) {
-		req.url = "/" + file;
+	return (req, res, next) => {
+		req.url = '/' + file;
 		staticHandler(req, res, next);
 	};
 }
@@ -228,22 +218,28 @@ GibRuns.start = function(options) {
 		app.use(compression());
 	}
 
-	// Request counter middleware
+	// Request counter and logging middleware
 	if (serveStatic) {
 		app.use(function(req, res, next) {
 			GibRuns.requestCount++;
+			const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+			const timestamp = new Date().toISOString();
 			
-			// Log requests in verbose mode
-			if (GibRuns.logLevel >= 3) {
-				var timestamp = new Date().toLocaleTimeString();
-				console.log(chalk.gray('  [' + timestamp + '] ') + 
+			// Log all incoming requests
+			if (GibRuns.logLevel >= 1) {
+				console.log(chalk.gray(`  [${timestamp}] `) + 
 					chalk.cyan(req.method) + ' ' + 
 					chalk.white(req.url) + ' ' +
-					chalk.gray('from ' + (req.headers['x-forwarded-for'] || req.connection.remoteAddress)));
+					chalk.gray(`from ${ip}`));
 			}
 			
 			next();
 		});
+		
+		// Add request history tracking
+		const historyMiddleware = require('./middleware/history')();
+		app.use(historyMiddleware);
+		GibRuns.getRequestHistory = require('./middleware/history').getHistory;
 		
 		// Add health check endpoint
 		if (enableHealth) {
@@ -377,25 +373,26 @@ GibRuns.start = function(options) {
 
 	// Handle server startup errors
 	server.addListener('error', function(e) {
+		const timestamp = new Date().toISOString();
 		if (e.code === 'EADDRINUSE') {
 			var serveURL = protocol + '://' + host + ':' + port;
-			console.log(chalk.yellow("  ⚠ " + serveURL + " is already in use. Trying another port..."));
-			if (GibRuns.logLevel >= 3) {
-				console.log(chalk.gray('  💡 Port ' + port + ' is occupied, searching for available port...'));
+			console.log(chalk.yellow(`  ⚠ [${timestamp}] ${serveURL} is already in use. Trying another port...`));
+			if (GibRuns.logLevel >= 2) {
+				console.log(chalk.gray(`  💡 Port ${port} is occupied, searching for available port...`));
 			}
 			setTimeout(function() {
 				server.listen(0, host);
 			}, 1000);
 		} else {
-			console.error(chalk.red("  ✖ Server Error: " + e.toString()));
-			if (GibRuns.logLevel >= 3) {
+			console.error(chalk.red(`  ✖ [${timestamp}] Server Error: ${e.toString()}`));
+			if (GibRuns.logLevel >= 2) {
 				console.error(chalk.gray('  Stack trace:'), e.stack);
 			}
 			
 			// Auto-restart on crash if enabled
 			if (autoRestart && GibRuns.restartCount < 5) {
 				GibRuns.restartCount++;
-				console.log(chalk.yellow('  🔄 Auto-restarting server (attempt ' + GibRuns.restartCount + '/5)...'));
+				console.log(chalk.yellow(`  🔄 [${timestamp}] Auto-restarting server (attempt ${GibRuns.restartCount}/5)...`));
 				setTimeout(function() {
 					GibRuns.start(options);
 				}, 2000);
@@ -647,26 +644,48 @@ GibRuns.start = function(options) {
 	});
 	function handleChange(changePath) {
 		GibRuns.reloadCount++;
-		var cssChange = path.extname(changePath) === ".css" && !noCssInject;
-		var relPath = path.relative(root, changePath);
-		var timestamp = new Date().toLocaleTimeString();
+		const cssChange = path.extname(changePath) === ".css" && !noCssInject;
+		const relPath = path.relative(root, changePath);
+		const timestamp = new Date().toISOString();
+		const fileSize = fs.existsSync(changePath) ? fs.statSync(changePath).size : 0;
 		
 		if (GibRuns.logLevel >= 1) {
 			if (cssChange) {
-				console.log(chalk.magenta('  ⚡ [' + timestamp + '] CSS updated: ') + chalk.gray(relPath));
+				console.log(chalk.magenta(`  ⚡ [${timestamp}] CSS updated: `) + chalk.gray(relPath) + 
+					chalk.dim(` (${(fileSize / 1024).toFixed(2)}KB)`));
 			} else {
-				console.log(chalk.cyan('  🔄 [' + timestamp + '] File changed: ') + chalk.gray(relPath));
+				console.log(chalk.cyan(`  🔄 [${timestamp}] File changed: `) + chalk.gray(relPath) + 
+					chalk.dim(` (${(fileSize / 1024).toFixed(2)}KB)`));
 			}
 		}
+		
 		clients.forEach(function(ws) {
-			if (ws)
-				ws.send(cssChange ? 'refreshcss' : 'reload');
+			if (ws) ws.send(cssChange ? 'refreshcss' : 'reload');
 		});
 	}
+	
+	function handleAdd(addPath) {
+		const relPath = path.relative(root, addPath);
+		const timestamp = new Date().toISOString();
+		if (GibRuns.logLevel >= 2) {
+			console.log(chalk.green(`  ➕ [${timestamp}] File added: `) + chalk.gray(relPath));
+		}
+		handleChange(addPath);
+	}
+	
+	function handleUnlink(unlinkPath) {
+		const relPath = path.relative(root, unlinkPath);
+		const timestamp = new Date().toISOString();
+		if (GibRuns.logLevel >= 2) {
+			console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
+		}
+		handleChange(unlinkPath);
+	}
+	
 	GibRuns.watcher
 		.on("change", handleChange)
-		.on("add", handleChange)
-		.on("unlink", handleChange)
+		.on("add", handleAdd)
+		.on("unlink", handleUnlink)
 		.on("addDir", handleChange)
 		.on("unlinkDir", handleChange)
 		.on("ready", function () {
@@ -674,7 +693,11 @@ GibRuns.start = function(options) {
 				console.log(chalk.cyan("  ✓ Watching for file changes...\n"));
 		})
 		.on("error", function (err) {
-			console.log(chalk.red("  ✖ Watcher Error: ") + err);
+			const timestamp = new Date().toISOString();
+			console.log(chalk.red(`  ✖ [${timestamp}] Watcher Error: `) + err.message);
+			if (GibRuns.logLevel >= 2) {
+				console.error(err.stack);
+			}
 		});
 
 	return server;

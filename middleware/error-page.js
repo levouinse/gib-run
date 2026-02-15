@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 const errorTemplate = `<!DOCTYPE html>
 <html lang="en">
@@ -107,11 +106,10 @@ const errorMessages = {
 	503: { message: 'Service Unavailable', description: 'The server is temporarily unable to handle the request.' }
 };
 
-module.exports = function(options) {
-	options = options || {};
+module.exports = (options = {}) => {
 	const showStack = options.showStack !== false;
 	
-	return function(err, req, res, next) {
+	return (err, req, res, next) => {
 		if (!err) return next();
 		
 		const status = err.status || err.statusCode || 500;
