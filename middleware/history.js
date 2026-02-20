@@ -1,10 +1,7 @@
-const chalk = require('chalk');
-
 let requestHistory = [];
 const maxHistory = 50;
 
-module.exports = (options = {}) => {
-	const showHistory = options.showHistory !== false;
+module.exports = () => {
 	
 	return (req, res, next) => {
 		const start = Date.now();

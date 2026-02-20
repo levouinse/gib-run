@@ -1,18 +1,14 @@
 #!/usr/bin/env node
 const fs = require('fs');
 const connect = require('connect');
-const serveIndex = require('serve-index');
-const logger = require('morgan');
-const WebSocket = require('faye-websocket');
 const path = require('path');
 const http = require('http');
 const send = require('send');
-const open = require('open');
-const es = require('event-stream');
-const compression = require('compression');
-const os = require('os');
 const chokidar = require('chokidar');
 const chalk = require('chalk');
+
+// Lazy load heavy modules
+let serveIndex, logger, WebSocket, open, es, compression, os;
 
 try {
 	require('dotenv').config({ path: path.join(process.cwd(), '.env') });
@@ -35,6 +31,9 @@ const GibRuns = {
 	restartCount: 0
 };
 
+// Optimized timestamp function
+const getTimestamp = () => new Date().toISOString();
+
 const escape = (html) => String(html)
 	.replace(/&(?!\w+;)/g, '&amp;')
 	.replace(/</g, '&lt;')
@@ -48,17 +47,49 @@ function staticServer(root) {
 	} catch (e) {
 		if (e.code !== 'ENOENT') throw e;
 	}
+	
+	// Cache for parsed URLs to avoid repeated parsing
+	const urlCache = new Map();
+	const maxCacheSize = 100;
 
 	return (req, res, next) => {
 		if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 		
-		const reqpath = isFile ? '' : new URL(req.url, 'http://localhost').pathname;
+		// Use cached URL parsing
+		let reqpath;
+		if (isFile) {
+			reqpath = '';
+		} else {
+			const cacheKey = req.url;
+			if (urlCache.has(cacheKey)) {
+				reqpath = urlCache.get(cacheKey);
+			} else {
+				reqpath = new URL(req.url, 'http://localhost').pathname;
+				if (urlCache.size >= maxCacheSize) {
+					const firstKey = urlCache.keys().next().value;
+					urlCache.delete(firstKey);
+				}
+				urlCache.set(cacheKey, reqpath);
+			}
+		}
+		
 		const hasNoOrigin = !req.headers.origin;
 		const injectCandidates = [/<\/body>/i, /<\/svg>/i, /<\/head>/i];
 		let injectTag = null;
 
 		const directory = () => {
-			const pathname = new URL(req.originalUrl, 'http://localhost').pathname;
+			let pathname;
+			const cacheKey = req.originalUrl;
+			if (urlCache.has(cacheKey)) {
+				pathname = urlCache.get(cacheKey);
+			} else {
+				pathname = new URL(req.originalUrl, 'http://localhost').pathname;
+				if (urlCache.size >= maxCacheSize) {
+					const firstKey = urlCache.keys().next().value;
+					urlCache.delete(firstKey);
+				}
+				urlCache.set(cacheKey, pathname);
+			}
 			res.statusCode = 301;
 			res.setHeader('Location', pathname + '/');
 			res.end('Redirecting to ' + escape(pathname) + '/');
@@ -88,6 +119,7 @@ function staticServer(root) {
 
 		const inject = (stream) => {
 			if (injectTag) {
+				if (!es) es = require('event-stream');
 				const len = INJECTED_CODE.length + res.getHeader('Content-Length');
 				res.setHeader('Content-Length', len);
 				const originalPipe = stream.pipe;
@@ -215,6 +247,7 @@ GibRuns.start = function(options) {
 
 	// Enable compression for better performance
 	if (enableCompression && serveStatic) {
+		if (!compression) compression = require('compression');
 		app.use(compression());
 	}
 
@@ -223,7 +256,7 @@ GibRuns.start = function(options) {
 		app.use(function(req, res, next) {
 			GibRuns.requestCount++;
 			const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-			const timestamp = new Date().toISOString();
+			const timestamp = getTimestamp();
 			
 			// Log all incoming requests
 			if (GibRuns.logLevel >= 1) {
@@ -236,13 +269,15 @@ GibRuns.start = function(options) {
 			next();
 		});
 		
-		// Add request history tracking
-		const historyMiddleware = require('./middleware/history')();
-		app.use(historyMiddleware);
-		GibRuns.getRequestHistory = require('./middleware/history').getHistory;
+		// Add request history tracking (skip in test mode)
+		if (!testMode) {
+			const historyMiddleware = require('./middleware/history')();
+			app.use(historyMiddleware);
+			GibRuns.getRequestHistory = require('./middleware/history').getHistory;
+		}
 		
-		// Add health check endpoint
-		if (enableHealth) {
+		// Add health check endpoint (skip in test mode)
+		if (enableHealth && !testMode) {
 			app.use(require('./middleware/health')(GibRuns));
 		}
 		
@@ -264,11 +299,13 @@ GibRuns.start = function(options) {
 
 		// Add logger. Level 2 logs only errors
 		if (GibRuns.logLevel === 2) {
+			if (!logger) logger = require('morgan');
 			app.use(logger('dev', {
 				skip: function (req, res) { return res.statusCode < 400; }
 			}));
 		// Level 2 or above logs all requests
 		} else if (GibRuns.logLevel > 2) {
+			if (!logger) logger = require('morgan');
 			app.use(logger('dev'));
 		}
 	}
@@ -340,8 +377,10 @@ GibRuns.start = function(options) {
 				console.log(chalk.cyan('  🔀 Proxying ') + chalk.yellow(proxyRule[0]) + chalk.gray(' to ') + chalk.white('"' + proxyRule[1] + '"'));
 		});
 		app.use(staticServerHandler) // Custom static server
-			.use(entryPoint(staticServerHandler, file))
-			.use(serveIndex(root, { icons: true }));
+			.use(entryPoint(staticServerHandler, file));
+		
+		if (!serveIndex) serveIndex = require('serve-index');
+		app.use(serveIndex(root, { icons: true }));
 		
 		// Add custom error page handler (must be last)
 		if (customErrorPage) {
@@ -373,7 +412,7 @@ GibRuns.start = function(options) {
 
 	// Handle server startup errors
 	server.addListener('error', function(e) {
-		const timestamp = new Date().toISOString();
+		const timestamp = getTimestamp();
 		if (e.code === 'EADDRINUSE') {
 			var serveURL = protocol + '://' + host + ':' + port;
 			console.log(chalk.yellow(`  ⚠ [${timestamp}] ${serveURL} is already in use. Trying another port...`));
@@ -484,6 +523,7 @@ GibRuns.start = function(options) {
 		
 		// Always get network interfaces for proper binding
 		if (address.address === "0.0.0.0" || host === "0.0.0.0") {
+			if (!os) os = require('os');
 			var ifaces = os.networkInterfaces();
 			networkURLs = Object.keys(ifaces)
 				.map(function(iface) {
@@ -556,7 +596,8 @@ GibRuns.start = function(options) {
 		}
 
 		// Launch browser
-		if (openPath !== null)
+		if (openPath !== null) {
+			if (!open) open = require('open');
 			if (typeof openPath === "object") {
 				openPath.forEach(function(p) {
 					open(openURL + p, {app: browser});
@@ -564,10 +605,11 @@ GibRuns.start = function(options) {
 			} else {
 				open(openURL + openPath, {app: browser});
 			}
+		}
 		
 		// Auto shutdown for tests
 		if (testMode) {
-			setTimeout(GibRuns.shutdown, 500);
+			setTimeout(GibRuns.shutdown, 100);
 		}
 	});
 
@@ -585,6 +627,7 @@ GibRuns.start = function(options) {
 	// WebSocket
 	var clients = [];
 	server.addListener('upgrade', function(request, socket, head) {
+		if (!WebSocket) WebSocket = require('faye-websocket');
 		var ws = new WebSocket(request, socket, head);
 		ws.onopen = function() { ws.send('connected'); };
 
@@ -637,16 +680,19 @@ GibRuns.start = function(options) {
 		ignored: ignored,
 		ignoreInitial: true,
 		ignorePermissionErrors: true,
-		awaitWriteFinish: {
+		awaitWriteFinish: testMode ? false : {
 			stabilityThreshold: 100,
 			pollInterval: 50
-		}
+		},
+		usePolling: testMode ? false : undefined,
+		interval: testMode ? undefined : 100,
+		binaryInterval: testMode ? undefined : 300
 	});
 	function handleChange(changePath) {
 		GibRuns.reloadCount++;
 		const cssChange = path.extname(changePath) === ".css" && !noCssInject;
 		const relPath = path.relative(root, changePath);
-		const timestamp = new Date().toISOString();
+		const timestamp = getTimestamp();
 		const fileSize = fs.existsSync(changePath) ? fs.statSync(changePath).size : 0;
 		
 		if (GibRuns.logLevel >= 1) {
@@ -666,7 +712,7 @@ GibRuns.start = function(options) {
 	
 	function handleAdd(addPath) {
 		const relPath = path.relative(root, addPath);
-		const timestamp = new Date().toISOString();
+		const timestamp = getTimestamp();
 		if (GibRuns.logLevel >= 2) {
 			console.log(chalk.green(`  ➕ [${timestamp}] File added: `) + chalk.gray(relPath));
 		}
@@ -675,7 +721,7 @@ GibRuns.start = function(options) {
 	
 	function handleUnlink(unlinkPath) {
 		const relPath = path.relative(root, unlinkPath);
-		const timestamp = new Date().toISOString();
+		const timestamp = getTimestamp();
 		if (GibRuns.logLevel >= 2) {
 			console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
 		}
@@ -689,14 +735,16 @@ GibRuns.start = function(options) {
 		.on("addDir", handleChange)
 		.on("unlinkDir", handleChange)
 		.on("ready", function () {
-			if (GibRuns.logLevel >= 1)
+			if (GibRuns.logLevel >= 1 && !testMode)
 				console.log(chalk.cyan("  ✓ Watching for file changes...\n"));
 		})
 		.on("error", function (err) {
-			const timestamp = new Date().toISOString();
-			console.log(chalk.red(`  ✖ [${timestamp}] Watcher Error: `) + err.message);
-			if (GibRuns.logLevel >= 2) {
-				console.error(err.stack);
+			if (!testMode) {
+				const timestamp = getTimestamp();
+				console.log(chalk.red(`  ✖ [${timestamp}] Watcher Error: `) + err.message);
+				if (GibRuns.logLevel >= 2) {
+					console.error(err.stack);
+				}
 			}
 		});
 

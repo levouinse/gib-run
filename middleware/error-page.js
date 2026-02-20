@@ -1,5 +1,3 @@
-const fs = require('fs');
-
 const errorTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>

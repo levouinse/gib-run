@@ -6,13 +6,19 @@ module.exports = (options = {}) => {
 	const maxSize = options.maxSize || 10 * 1024 * 1024;
 	
 	let logStream = fs.createWriteStream(logFile, { flags: 'a' });
+	let lastRotateCheck = 0;
+	const rotateCheckInterval = 60000; // Check rotation every 60s max
 	
 	const checkRotate = () => {
+		const now = Date.now();
+		if (now - lastRotateCheck < rotateCheckInterval) return;
+		lastRotateCheck = now;
+		
 		try {
 			const stats = fs.statSync(logFile);
 			if (stats.size > maxSize) {
 				logStream.end();
-				fs.renameSync(logFile, logFile + '.' + Date.now());
+				fs.renameSync(logFile, logFile + '.' + now);
 				logStream = fs.createWriteStream(logFile, { flags: 'a' });
 			}
 		} catch (e) {}

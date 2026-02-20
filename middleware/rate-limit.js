@@ -3,13 +3,16 @@ module.exports = (options = {}) => {
 	const windowMs = options.window || 60000;
 	const requests = {};
 	
-	setInterval(() => {
+	const cleanupInterval = setInterval(() => {
 		const now = Date.now();
 		Object.keys(requests).forEach(ip => {
 			requests[ip] = requests[ip].filter(time => now - time < windowMs);
 			if (requests[ip].length === 0) delete requests[ip];
 		});
 	}, windowMs);
+	
+	// Cleanup on process exit
+	if (cleanupInterval.unref) cleanupInterval.unref();
 	
 	return (req, res, next) => {
 		const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
