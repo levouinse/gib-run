@@ -42,8 +42,8 @@ const createProxyMiddleware = (proxyRules) => {
 	});
 	
 	return (req, res, next) => {
-		for (const { middleware } of middlewares) {
-			if (req.url.startsWith(middleware.route)) {
+		for (const { route, middleware } of middlewares) {
+			if (req.url.startsWith(route)) {
 				return middleware(req, res, next);
 			}
 		}

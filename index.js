@@ -10,6 +10,7 @@ const chalk = require('chalk');
 // Load modular components
 const portResolver = require('./lib/port-resolver');
 const shareManager = require('./lib/share-manager');
+const { logger } = require('./core/logger');
 
 // Lazy load heavy modules
 let serveIndex, loggerMorgan, WebSocket, open, es, compression, os;
@@ -114,7 +115,7 @@ function staticServer(root) {
 				if (match) {
 					injectTag = contents.match(match)[0];
 				} else if (GibRuns.logLevel >= 3) {
-					console.warn(chalk.yellow('⚠ Failed to inject refresh script!'),
+					logger.warn('Failed to inject refresh script!',
 						"Couldn't find any of the tags", injectCandidates, 'from', filepath);
 				}
 			}
@@ -239,8 +240,8 @@ GibRuns.start = function(options) {
 		try {
 			require.resolve(httpsModule);
 		} catch {
-			console.error(chalk.red("HTTPS module \"" + httpsModule + "\" you've provided was not found."));
-			console.error("Did you do", "\"npm install " + httpsModule + "\"?");
+			logger.error("HTTPS module \"" + httpsModule + "\" you've provided was not found.");
+			logger.error("Did you do \"npm install " + httpsModule + "\"?");
 			return;
 		}
 	} else {
@@ -510,13 +511,13 @@ GibRuns.start = function(options) {
 				
 				// Start tunnel if requested (for npm/exec mode)
 				if (enableTunnel) {
-					var tunnel = require('./lib/tunnel');
-					GibRuns.tunnel = tunnel;
+					var { tunnelManager } = require('./features/tunnel');
+					GibRuns.tunnel = tunnelManager;
 					setTimeout(function() {
 						// For npm/exec mode, we need to detect the port from the process output
 						// For now, use a default port or let user specify via --port
 						var tunnelPort = port || 8080;
-						tunnel.startTunnel(tunnelPort, tunnelService, tunnelOptions);
+						tunnelManager.start(tunnelPort, tunnelService, tunnelOptions);
 					}, 2000);
 				}
 			}, 500);
@@ -622,10 +623,10 @@ GibRuns.start = function(options) {
 		
 		// Start tunnel if requested
 		if (enableTunnel) {
-			var tunnel = require('./lib/tunnel');
-			GibRuns.tunnel = tunnel;
+			var { tunnelManager } = require('./features/tunnel');
+			GibRuns.tunnel = tunnelManager;
 			setTimeout(function() {
-				tunnel.startTunnel(address.port, tunnelService, tunnelOptions);
+				tunnelManager.start(address.port, tunnelService, tunnelOptions);
 			}, 1000);
 		}
 
@@ -833,7 +834,7 @@ GibRuns.shutdown = function() {
 	
 	// Stop tunnel if active
 	if (GibRuns.tunnel) {
-		GibRuns.tunnel.stopTunnel();
+		GibRuns.tunnel.stop();
 	}
 	
 	var watcher = GibRuns.watcher;
