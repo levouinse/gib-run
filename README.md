@@ -41,6 +41,19 @@ Named after Indonesia's Vice President Gibran Rakabuming Raka, who got his posit
 - 🌍 **Public Tunnels** - Share your dev server with anyone, anywhere
 - 📱 **Multi-Device** - Access from any device on your network
 
+### 🆕 New Features
+
+- 🎯 **Interactive CLI** - Inquirer-style setup wizard
+- 🔍 **Auto-Detect** - Automatically detect project type (React, Vue, Angular, etc.)
+- ⚙️ **Config Generator** - Generate `.gib-runs.json` with one command
+- 🎨 **Enhanced Logging** - Color-coded logs with better formatting
+- 🔗 **Secure Share Links** - Password-protected share links with expiration
+- 📱 **QR Code Sharing** - Share via QR code for mobile access
+- 🐳 **Docker Support** - Generate Docker files and docker-compose
+- 🔧 **Port Resolver** - Automatic port conflict resolution
+- 🏢 **Multi-Project** - Run multiple projects simultaneously
+- 🌐 **Remote Collaboration** - Secure team sharing with access control
+
 ## Installation
 
 ```bash
@@ -54,6 +67,13 @@ npm install --save-dev gib-runs
 ## Quick Start
 
 ```bash
+# Interactive setup (recommended for first time)
+gib-runs --init
+
+# Auto-detect project and start
+gib-runs --detect
+gib-runs
+
 # Serve current directory
 gib-runs
 
@@ -68,6 +88,12 @@ gib-runs --spa
 
 # With HTTPS
 gib-runs --https=./config/https.conf.js
+
+# Generate config file
+gib-runs --generate-config
+
+# Docker setup
+gib-runs --docker-init
 ```
 
 ## Common Use Cases
@@ -188,6 +214,14 @@ gib-runs --https=./https.conf.js
 | `--auto-restart` | Auto-restart server on crash | `false` |
 | `--enable-upload` | Enable file upload endpoint | `false` |
 | `--log-to-file` | Log requests to file | `false` |
+| `--init` | Interactive setup wizard | - |
+| `--detect` | Auto-detect project type | - |
+| `--generate-config` | Generate config file | - |
+| `--docker-init` | Generate Docker files | - |
+| `--share` | Create secure share link | `false` |
+| `--share-password` | Password-protect share link | `false` |
+| `--share-expires=MIN` | Share link expiration (minutes) | None |
+| `--share-qr` | Show QR code for share link | `false` |
 
 ## Node.js API
 
@@ -393,7 +427,7 @@ gib-runs --middleware=./middleware/custom.js
 Server automatically binds to `0.0.0.0` and shows all network URLs:
 
 ```
-🚀 GIB-RUNS v2.3.8
+🚀 GIB-RUNS v2.5.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080
