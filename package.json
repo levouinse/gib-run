@@ -1,6 +1,6 @@
 {
   "name": "gib-runs",
-  "version": "2.4.2",
+  "version": "2.5.0",
   "description": "Modern development server with live reload, hot module replacement, and advanced features - runs on merit, not nepotism",
   "keywords": [
     "development",
@@ -24,7 +24,7 @@
   "dependencies": {
     "boxen": "^5.1.2",
     "chalk": "^4.1.2",
-    "chokidar": "^3.5.3",
+    "chokidar": "^3.6.0",
     "compression": "^1.7.4",
     "connect": "^3.7.0",
     "cors": "^2.8.5",
@@ -32,6 +32,7 @@
     "event-stream": "^4.0.1",
     "faye-websocket": "^0.11.4",
     "http-auth": "^4.2.0",
+    "js-yaml": "^4.1.0",
     "localtunnel": "^2.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
@@ -39,19 +40,29 @@
     "open": "^8.4.2",
     "ora": "^5.4.1",
     "proxy-middleware": "^0.15.0",
-    "send": "^0.18.0",
+    "qrcode-terminal": "^0.12.0",
+    "send": "^0.19.2",
     "serve-index": "^1.9.1"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
+    "eslint": "^9.17.0",
     "jshint": "^2.13.6",
-    "mocha": "^10.2.0",
-    "supertest": "^6.3.3"
+    "mocha": "^11.0.1",
+    "nyc": "^17.1.0",
+    "supertest": "^7.0.0"
+  },
+  "overrides": {
+    "axios": "^1.7.9",
+    "minimatch": "^10.0.1",
+    "glob": "^11.0.0",
+    "diff": "^7.0.0"
   },
   "scripts": {
-    "lint": "eslint gib-run.js index.js",
+    "lint": "eslint gib-run.js index.js core/**/*.js features/**/*.js lib/**/*.js",
     "hint": "jshint gib-run.js index.js",
-    "test": "mocha test --exit && npm run lint"
+    "test": "mocha test/*.js --exit && npm run lint",
+    "test:coverage": "nyc mocha test/*.js --exit",
+    "test:watch": "mocha test/*.js --watch"
   },
   "bin": {
     "gib-runs": "gib-run.js"
@@ -65,7 +76,7 @@
   },
   "homepage": "https://github.com/levouinse/gib-runs#readme",
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "preferGlobal": true,
   "license": "MIT",

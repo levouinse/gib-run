@@ -1,9 +1,14 @@
 #!/usr/bin/env node
 var path = require('path');
-var fs = require('fs');
 var assign = require('object-assign');
 var chalk = require('chalk');
 var gibRuns = require("./index");
+
+// Load modular components
+var configManager = require('./lib/config-manager');
+var projectDetector = require('./lib/project-detector');
+var interactiveCli = require('./lib/interactive-cli');
+var dockerHelper = require('./lib/docker-helper');
 
 var opts = {
 	host: process.env.IP,
@@ -15,21 +20,10 @@ var opts = {
 	logLevel: 2,
 };
 
-var homeDir = process.env[(process.platform === 'win32') ? 'USERPROFILE' : 'HOME'];
-var configPath = path.join(homeDir, '.gib-runs.json');
-if (fs.existsSync(configPath)) {
-	var userConfig = fs.readFileSync(configPath, 'utf8');
-	assign(opts, JSON.parse(userConfig));
-	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
-}
-
-// Project-level config (overrides global config)
-var projectConfigPath = path.join(process.cwd(), '.gib-runs.json');
-if (fs.existsSync(projectConfigPath)) {
-	var projectConfig = fs.readFileSync(projectConfigPath, 'utf8');
-	assign(opts, JSON.parse(projectConfig));
-	if (opts.ignorePattern) opts.ignorePattern = new RegExp(opts.ignorePattern);
-}
+// Load configs using config manager
+var globalConfig = configManager.loadGlobalConfig();
+var projectConfig = configManager.loadProjectConfig();
+assign(opts, globalConfig, projectConfig);
 
 for (var i = process.argv.length - 1; i >= 2; --i) {
 	var arg = process.argv[i];
@@ -227,8 +221,8 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 	}
 	else if (arg.indexOf("--proxy=") > -1) {
 		// split only on the first ":", as the URL will contain ":" as well
-		var match = arg.substring(8).match(/([^:]+):(.+)$/);
-		opts.proxy.push([ match[1], match[2] ]);
+		var proxyMatch = arg.substring(8).match(/([^:]+):(.+)$/);
+		opts.proxy.push([ proxyMatch[1], proxyMatch[2] ]);
 		process.argv.splice(i, 1);
 	}
 	else if (arg.indexOf("--middleware=") > -1) {
@@ -278,9 +272,21 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		console.log(chalk.yellow('    --enable-upload        ') + chalk.gray('Enable file upload endpoint'));
 		console.log(chalk.yellow('    --no-health            ') + chalk.gray('Disable health check endpoint'));
 		console.log(chalk.yellow('    --log-to-file          ') + chalk.gray('Log requests to file'));
-		console.log(chalk.yellow('    --no-error-page        ') + chalk.gray('Disable custom error pages\n'));
+		console.log(chalk.yellow('    --no-error-page        ') + chalk.gray('Disable custom error pages'));
+		console.log(chalk.yellow('\n  🆕 New Features:\n'));
+		console.log(chalk.yellow('    --init                 ') + chalk.gray('Interactive setup wizard'));
+		console.log(chalk.yellow('    --detect               ') + chalk.gray('Auto-detect project type'));
+		console.log(chalk.yellow('    --generate-config      ') + chalk.gray('Generate .gib-runs.json'));
+		console.log(chalk.yellow('    --docker-init          ') + chalk.gray('Generate Docker files'));
+		console.log(chalk.yellow('    --share                ') + chalk.gray('Create secure share link'));
+		console.log(chalk.yellow('    --share-password       ') + chalk.gray('Protect share link with password'));
+		console.log(chalk.yellow('    --share-expires=MIN    ') + chalk.gray('Share link expiration (minutes)'));
+		console.log(chalk.yellow('    --share-qr             ') + chalk.gray('Show QR code for share link\n'));
 		console.log(chalk.gray('  Examples:\n'));
-		console.log(chalk.gray('    gib-runs'));
+		console.log(chalk.gray('    gib-runs --init                    ') + chalk.dim('# Interactive setup'));
+		console.log(chalk.gray('    gib-runs --detect                  ') + chalk.dim('# Auto-detect project'));
+		console.log(chalk.gray('    gib-runs --docker-init             ') + chalk.dim('# Generate Docker files'));
+		console.log(chalk.gray('    gib-runs --share --share-qr        ') + chalk.dim('# Share with QR code'));
 		console.log(chalk.gray('    gib-runs --port=3000 --verbose'));
 		console.log(chalk.gray('    gib-runs dist --spa --security'));
 		console.log(chalk.gray('    gib-runs --tunnel'));
@@ -299,10 +305,64 @@ for (var i = process.argv.length - 1; i >= 2; --i) {
 		opts.test = true;
 		process.argv.splice(i, 1);
 	}
+	else if (arg === "--init") {
+		// Interactive setup
+		(async () => {
+			await interactiveCli.interactiveSetup();
+			process.exit();
+		})();
+		return;
+	}
+	else if (arg === "--detect") {
+		// Auto-detect project
+		projectDetector.displayDetection(process.cwd());
+		process.exit();
+	}
+	else if (arg === "--generate-config") {
+		// Generate config file
+		const suggestion = projectDetector.suggestConfig(process.cwd());
+		const config = configManager.generateConfig(suggestion);
+		const saved = configManager.saveProjectConfig(config);
+		if (saved) {
+			console.log(chalk.green('\n  ✓ Configuration saved to .gib-runs.json\n'));
+		}
+		process.exit();
+	}
+	else if (arg === "--docker-init") {
+		// Generate Docker files
+		const suggestion = projectDetector.suggestConfig(process.cwd());
+		dockerHelper.saveDockerFiles(process.cwd(), suggestion);
+		process.exit();
+	}
+	else if (arg === "--share") {
+		opts.createShare = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--share-password") {
+		opts.sharePassword = true;
+		process.argv.splice(i, 1);
+	}
+	else if (arg.indexOf("--share-expires=") > -1) {
+		opts.shareExpires = parseInt(arg.substring(16), 10) * 60 * 1000;
+		process.argv.splice(i, 1);
+	}
+	else if (arg === "--share-qr") {
+		opts.shareQR = true;
+		process.argv.splice(i, 1);
+	}
 }
 
 // Patch paths
 var dir = opts.root = process.argv[2] || "";
+
+// Auto-detect project if no explicit config
+if (!opts.spa && !opts.npmScript && !opts.exec && opts.logLevel >= 1) {
+	var detection = projectDetector.detectFramework(process.cwd());
+	if (detection.framework && detection.type === 'spa') {
+		console.log(chalk.cyan('  🔍 Detected: ') + chalk.yellow(detection.framework) + 
+			chalk.gray(' (use --spa for SPA mode)'));
+	}
+}
 
 if (opts.watch) {
 	opts.watch = opts.watch.map(function(relativePath) {

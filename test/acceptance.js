@@ -55,13 +55,19 @@ describe('basic functional tests', function(){
 			})
 			.expect(200, done);
 	});
-	xit('should have WebSocket connection', function(done){
-		done(); // todo
+	it('should have WebSocket connection', function(done){
+		// WebSocket test requires actual browser connection
+		// Skipping for now as it needs integration test setup
+		this.skip();
 	});
-	xit('should reload on page change', function(done){
-		done(); // todo
+	it('should reload on page change', function(done){
+		// File change reload test requires watcher integration
+		// Skipping for now as it needs integration test setup
+		this.skip();
 	});
-	xit('should reload (without refreshing) on css change', function(done){
-		done(); // todo
+	it('should reload (without refreshing) on css change', function(done){
+		// CSS hot reload test requires watcher integration
+		// Skipping for now as it needs integration test setup
+		this.skip();
 	});
 });

@@ -2,6 +2,109 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2026-02-22
+
+### Added - Modular Architecture
+- 🏗️ **Modular Codebase** - Refactored into clean, maintainable modules
+  - `lib/config-manager.js` - Centralized configuration management
+  - `lib/project-detector.js` - Auto-detect project frameworks
+  - `lib/port-resolver.js` - Automatic port conflict resolution
+  - `lib/share-manager.js` - Secure share links with auth
+  - `lib/logger.js` - Enhanced logging with colors and formatting
+  - `lib/docker-helper.js` - Docker file generation
+  - `lib/interactive-cli.js` - Interactive setup wizard
+
+### Added - Interactive CLI
+- 🎯 **Interactive Setup Wizard** - `--init` flag
+  - Inquirer-style prompts for easy configuration
+  - Step-by-step setup for all options
+  - Auto-saves to `.gib-runs.json`
+  - Perfect for first-time users
+
+### Added - Auto-Detection
+- 🔍 **Project Type Detection** - `--detect` flag
+  - Automatically detects React, Vue, Angular, Svelte
+  - Identifies Next.js, Nuxt, Vite, CRA, Vue CLI
+  - Suggests optimal configuration
+  - Shows framework-specific recommendations
+- ⚙️ **Config Generator** - `--generate-config` flag
+  - Generates `.gib-runs.json` based on detection
+  - Framework-specific defaults
+  - One command setup
+
+### Added - Remote Collaboration
+- 🔗 **Secure Share Links** - `--share` flag
+  - Password-protected share links
+  - Expiration control (minutes)
+  - Access count limits
+  - Metadata tracking
+- 📱 **QR Code Sharing** - `--share-qr` flag
+  - Generate QR codes for mobile access
+  - Works with share links and network URLs
+  - Perfect for multi-device testing
+- 🔐 **Share Authentication** - `--share-password` flag
+  - Auto-generated secure passwords
+  - Custom password support
+  - Token-based access control
+- ⏰ **Share Expiration** - `--share-expires=MIN` flag
+  - Time-limited access (minutes)
+  - Automatic cleanup of expired links
+  - Perfect for temporary previews
+
+### Added - Docker Support
+- 🐳 **Docker File Generator** - `--docker-init` flag
+  - Generates optimized Dockerfile
+  - Creates docker-compose.yml
+  - Includes .dockerignore
+  - Health checks included
+  - Hot reload support in containers
+- 🔧 **Docker-Ready Mode**
+  - Detects Docker environment
+  - Optimized settings for containers
+  - Network-friendly defaults
+
+### Added - Port Management
+- 🔧 **Port Conflict Resolver**
+  - Automatically finds available ports
+  - Graceful fallback on conflicts
+  - Multi-project workspace support
+  - Clear user notifications
+
+### Improved - Logging & UX
+- 🎨 **Enhanced Logging System**
+  - Color-coded log levels
+  - Better formatting and readability
+  - Request logging with colors
+  - File change notifications with icons
+  - Progress bars and tables
+- 📊 **Better TUI**
+  - Improved startup banner
+  - Clearer status messages
+  - Better error formatting
+  - Network URL display
+
+### Documentation
+- 📚 **New EXAMPLES.md** - Comprehensive usage examples
+  - Interactive setup examples
+  - Framework-specific guides
+  - Docker workflows
+  - Remote collaboration patterns
+  - Multi-project setups
+- 📖 **Updated README.md** - New features documented
+  - All new CLI flags
+  - Quick start guide updated
+  - Feature list expanded
+
+### Changed
+- 🔄 **Config Loading** - Now uses config-manager module
+  - Cleaner code organization
+  - Better error handling
+  - Consistent config merging
+- 🎯 **Project Detection** - Integrated into startup
+  - Auto-suggests SPA mode for detected frameworks
+  - Shows framework hints in logs
+  - Better user guidance
+
 ## [2.4.0] - 2026-02-15
 
 ### Added

@@ -7,12 +7,19 @@ const send = require('send');
 const chokidar = require('chokidar');
 const chalk = require('chalk');
 
+// Load modular components
+const portResolver = require('./lib/port-resolver');
+const shareManager = require('./lib/share-manager');
+const { logger } = require('./core/logger');
+
 // Lazy load heavy modules
-let serveIndex, logger, WebSocket, open, es, compression, os;
+let serveIndex, loggerMorgan, WebSocket, open, es, compression, os;
 
 try {
 	require('dotenv').config({ path: path.join(process.cwd(), '.env') });
-} catch (e) {}
+} catch {
+	// Ignore if dotenv fails
+}
 
 const INJECTED_CODE = fs.readFileSync(path.join(__dirname, 'injected.html'), 'utf8');
 const packageJson = require('./package.json');
@@ -64,6 +71,7 @@ function staticServer(root) {
 			if (urlCache.has(cacheKey)) {
 				reqpath = urlCache.get(cacheKey);
 			} else {
+				const { URL } = require('url');
 				reqpath = new URL(req.url, 'http://localhost').pathname;
 				if (urlCache.size >= maxCacheSize) {
 					const firstKey = urlCache.keys().next().value;
@@ -83,6 +91,7 @@ function staticServer(root) {
 			if (urlCache.has(cacheKey)) {
 				pathname = urlCache.get(cacheKey);
 			} else {
+				const { URL } = require('url');
 				pathname = new URL(req.originalUrl, 'http://localhost').pathname;
 				if (urlCache.size >= maxCacheSize) {
 					const firstKey = urlCache.keys().next().value;
@@ -106,7 +115,7 @@ function staticServer(root) {
 				if (match) {
 					injectTag = contents.match(match)[0];
 				} else if (GibRuns.logLevel >= 3) {
-					console.warn(chalk.yellow('⚠ Failed to inject refresh script!'),
+					logger.warn('Failed to inject refresh script!',
 						"Couldn't find any of the tags", injectCandidates, 'from', filepath);
 				}
 			}
@@ -230,9 +239,9 @@ GibRuns.start = function(options) {
 	if (httpsModule) {
 		try {
 			require.resolve(httpsModule);
-		} catch (e) {
-			console.error(chalk.red("HTTPS module \"" + httpsModule + "\" you've provided was not found."));
-			console.error("Did you do", "\"npm install " + httpsModule + "\"?");
+		} catch {
+			logger.error("HTTPS module \"" + httpsModule + "\" you've provided was not found.");
+			logger.error("Did you do \"npm install " + httpsModule + "\"?");
 			return;
 		}
 	} else {
@@ -299,15 +308,20 @@ GibRuns.start = function(options) {
 
 		// Add logger. Level 2 logs only errors
 		if (GibRuns.logLevel === 2) {
-			if (!logger) logger = require('morgan');
-			app.use(logger('dev', {
+			if (!loggerMorgan) loggerMorgan = require('morgan');
+			app.use(loggerMorgan('dev', {
 				skip: function (req, res) { return res.statusCode < 400; }
 			}));
 		// Level 2 or above logs all requests
 		} else if (GibRuns.logLevel > 2) {
-			if (!logger) logger = require('morgan');
-			app.use(logger('dev'));
+			if (!loggerMorgan) loggerMorgan = require('morgan');
+			app.use(loggerMorgan('dev'));
 		}
+	}
+	
+	// Add share link middleware if enabled
+	if (options.createShare) {
+		app.use(shareManager.createShareMiddleware());
 	}
 	
 	if (options.spa && serveStatic) {
@@ -363,6 +377,7 @@ GibRuns.start = function(options) {
 				console.log(chalk.cyan('  📂 Mapping ') + chalk.yellow(mountRule[0]) + chalk.gray(' to ') + chalk.white('"' + mountPath + '"'));
 		});
 		proxy.forEach(function(proxyRule) {
+			const { URL } = require('url');
 			var proxyUrl = new URL(proxyRule[1]);
 			var proxyOpts = {
 				protocol: proxyUrl.protocol,
@@ -453,7 +468,7 @@ GibRuns.start = function(options) {
 			if (GibRuns.logLevel >= 1) {
 				console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
-				console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
+				console.log(chalk.gray('  "Unlike some people, this actually runs on merit, not nepotism."'));
 				console.log(chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
 				if (npmScript) {
@@ -496,13 +511,13 @@ GibRuns.start = function(options) {
 				
 				// Start tunnel if requested (for npm/exec mode)
 				if (enableTunnel) {
-					var tunnel = require('./lib/tunnel');
-					GibRuns.tunnel = tunnel;
+					var { tunnelManager } = require('./features/tunnel');
+					GibRuns.tunnel = tunnelManager;
 					setTimeout(function() {
 						// For npm/exec mode, we need to detect the port from the process output
 						// For now, use a default port or let user specify via --port
 						var tunnelPort = port || 8080;
-						tunnel.startTunnel(tunnelPort, tunnelService, tunnelOptions);
+						tunnelManager.start(tunnelPort, tunnelService, tunnelOptions);
 					}, 2000);
 				}
 			}, 500);
@@ -547,7 +562,7 @@ GibRuns.start = function(options) {
 		if (GibRuns.logLevel >= 1) {
 			console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
-			console.log(chalk.gray('  "Unlike Gibran, this actually works through merit"'));
+			console.log(chalk.gray('  "Unlike some people, this actually runs on merit, not nepotism."'));
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.white('  📁 Root:       ') + chalk.yellow(root));
 			console.log(chalk.white('  🌐 Local:      ') + chalk.green(serveURL));
@@ -580,18 +595,38 @@ GibRuns.start = function(options) {
 			console.log(chalk.yellow('  💡 Tip: Share network URLs with your team!\n'));
 		}
 		
+		// Create share link if requested
+		if (options.createShare) {
+			var baseUrl = networkURLs.length > 0 ? networkURLs[0] : serveURL;
+			var shareData = shareManager.createShareLink({
+				secure: options.sharePassword,
+				expiresIn: options.shareExpires,
+				metadata: { server: 'gib-runs', version: packageJson.version }
+			});
+			
+			shareManager.displayShareInfo(baseUrl, shareData, {
+				showQR: options.shareQR
+			});
+		}
+		
 		// Show QR code for easy mobile access
 		if (showQR && networkURLs.length > 0) {
 			console.log(chalk.cyan('  📱 Scan QR code to open on mobile:'));
-			console.log(chalk.gray('     (Install qrcode-terminal: npm i -g qrcode-terminal)\n'));
+			shareManager.generateQRCode(networkURLs[0]).then(function(qr) {
+				if (qr) {
+					console.log(qr);
+				} else {
+					console.log(chalk.gray('     Install qrcode-terminal: npm i -g qrcode-terminal\n'));
+				}
+			});
 		}
 		
 		// Start tunnel if requested
 		if (enableTunnel) {
-			var tunnel = require('./lib/tunnel');
-			GibRuns.tunnel = tunnel;
+			var { tunnelManager } = require('./features/tunnel');
+			GibRuns.tunnel = tunnelManager;
 			setTimeout(function() {
-				tunnel.startTunnel(address.port, tunnelService, tunnelOptions);
+				tunnelManager.start(address.port, tunnelService, tunnelOptions);
 			}, 1000);
 		}
 
@@ -615,7 +650,19 @@ GibRuns.start = function(options) {
 
 	// Setup server to listen at port (skip if npm script is running)
 	if (serveStatic) {
-		server.listen(port, host);
+		// Use port resolver to handle conflicts
+		portResolver.resolvePortConflict(port, host, GibRuns.logLevel).then(function(resolvedPort) {
+			if (resolvedPort === null) {
+				console.error(chalk.red('  ✖ Could not find available port'));
+				process.exit(1);
+			}
+			
+			if (resolvedPort !== port && GibRuns.logLevel >= 1) {
+				console.log(chalk.yellow(`  ℹ Using port ${resolvedPort} instead of ${port}\n`));
+			}
+			
+			server.listen(resolvedPort, host);
+		});
 	} else {
 		// For npm script mode, just setup websocket server without HTTP
 		GibRuns.server = server;
@@ -787,7 +834,7 @@ GibRuns.shutdown = function() {
 	
 	// Stop tunnel if active
 	if (GibRuns.tunnel) {
-		GibRuns.tunnel.stopTunnel();
+		GibRuns.tunnel.stop();
 	}
 	
 	var watcher = GibRuns.watcher;
