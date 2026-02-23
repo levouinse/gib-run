@@ -35,7 +35,8 @@ const GibRuns = {
 	processRunner: null,
 	wsClients: [],
 	autoRestart: false,
-	restartCount: 0
+	restartCount: 0,
+	watcherReady: false // Global flag to prevent spam
 };
 
 // Optimized timestamp function
@@ -55,50 +56,40 @@ function staticServer(root) {
 		if (e.code !== 'ENOENT') throw e;
 	}
 	
-	// Cache for parsed URLs to avoid repeated parsing
+	// LRU cache with size limit
 	const urlCache = new Map();
-	const maxCacheSize = 100;
+	const MAX_CACHE = 50;
+	
+	const getCachedUrl = (url) => {
+		if (urlCache.has(url)) {
+			const value = urlCache.get(url);
+			urlCache.delete(url);
+			urlCache.set(url, value); // Move to end (LRU)
+			return value;
+		}
+		
+		const { URL } = require('url');
+		const pathname = new URL(url, 'http://localhost').pathname;
+		
+		if (urlCache.size >= MAX_CACHE) {
+			const firstKey = urlCache.keys().next().value;
+			urlCache.delete(firstKey);
+		}
+		
+		urlCache.set(url, pathname);
+		return pathname;
+	};
 
 	return (req, res, next) => {
 		if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 		
-		// Use cached URL parsing
-		let reqpath;
-		if (isFile) {
-			reqpath = '';
-		} else {
-			const cacheKey = req.url;
-			if (urlCache.has(cacheKey)) {
-				reqpath = urlCache.get(cacheKey);
-			} else {
-				const { URL } = require('url');
-				reqpath = new URL(req.url, 'http://localhost').pathname;
-				if (urlCache.size >= maxCacheSize) {
-					const firstKey = urlCache.keys().next().value;
-					urlCache.delete(firstKey);
-				}
-				urlCache.set(cacheKey, reqpath);
-			}
-		}
-		
+		const reqpath = isFile ? '' : getCachedUrl(req.url);
 		const hasNoOrigin = !req.headers.origin;
 		const injectCandidates = [/<\/body>/i, /<\/svg>/i, /<\/head>/i];
 		let injectTag = null;
 
 		const directory = () => {
-			let pathname;
-			const cacheKey = req.originalUrl;
-			if (urlCache.has(cacheKey)) {
-				pathname = urlCache.get(cacheKey);
-			} else {
-				const { URL } = require('url');
-				pathname = new URL(req.originalUrl, 'http://localhost').pathname;
-				if (urlCache.size >= maxCacheSize) {
-					const firstKey = urlCache.keys().next().value;
-					urlCache.delete(firstKey);
-				}
-				urlCache.set(cacheKey, pathname);
-			}
+			const pathname = getCachedUrl(req.originalUrl);
 			res.statusCode = 301;
 			res.setHeader('Location', pathname + '/');
 			res.end('Redirecting to ' + escape(pathname) + '/');
@@ -191,6 +182,11 @@ function entryPoint(staticHandler, file) {
 GibRuns.start = function(options) {
 	options = options || {};
 	GibRuns.startTime = Date.now();
+	
+	// Auto-detect test mode
+	var testMode = options.test || process.env.NODE_ENV === 'test' || 
+		(typeof describe !== 'undefined' && typeof it !== 'undefined');
+	
 	var host = options.host || '0.0.0.0';
 	var port = options.port !== undefined ? options.port : 8080; // 0 means random
 	var root = options.root || process.cwd();
@@ -227,11 +223,7 @@ GibRuns.start = function(options) {
 	var npmScript = options.npmScript || null;
 	var usePM2 = options.pm2 || false;
 	var pm2Name = options.pm2Name || 'gib-runs-app';
-	var testMode = options.test || false;
 	var autoRestart = options.autoRestart || false;
-	var enableUpload = options.enableUpload || false;
-	var enableHealth = options.enableHealth !== false;
-	var logToFile = options.logToFile || false;
 	var customErrorPage = options.customErrorPage !== false;
 	
 	GibRuns.autoRestart = autoRestart;
@@ -268,7 +260,7 @@ GibRuns.start = function(options) {
 			const timestamp = getTimestamp();
 			
 			// Log all incoming requests
-			if (GibRuns.logLevel >= 1) {
+			if (GibRuns.logLevel >= 1 && !testMode) {
 				console.log(chalk.gray(`  [${timestamp}] `) + 
 					chalk.cyan(req.method) + ' ' + 
 					chalk.white(req.url) + ' ' +
@@ -277,34 +269,6 @@ GibRuns.start = function(options) {
 			
 			next();
 		});
-		
-		// Add request history tracking (skip in test mode)
-		if (!testMode) {
-			const historyMiddleware = require('./middleware/history')();
-			app.use(historyMiddleware);
-			GibRuns.getRequestHistory = require('./middleware/history').getHistory;
-		}
-		
-		// Add health check endpoint (skip in test mode)
-		if (enableHealth && !testMode) {
-			app.use(require('./middleware/health')(GibRuns));
-		}
-		
-		// Add file upload endpoint
-		if (enableUpload) {
-			app.use(require('./middleware/upload')());
-			if (GibRuns.logLevel >= 1) {
-				console.log(chalk.cyan('  📤 File Upload: ') + chalk.green('Enabled') + chalk.gray(' (POST to /upload)'));
-			}
-		}
-		
-		// Add request logger to file
-		if (logToFile) {
-			app.use(require('./middleware/logger')({ logFile: path.join(root, 'gib-runs.log') }));
-			if (GibRuns.logLevel >= 1) {
-				console.log(chalk.cyan('  📝 File Logging: ') + chalk.green('Enabled') + chalk.gray(' (gib-runs.log)'));
-			}
-		}
 
 		// Add logger. Level 2 logs only errors
 		if (GibRuns.logLevel === 2) {
@@ -465,7 +429,7 @@ GibRuns.start = function(options) {
 		// If npm script is running, don't show server info
 		if (npmScript || execCommand) {
 			// Show info about what's running
-			if (GibRuns.logLevel >= 1) {
+			if (GibRuns.logLevel >= 1 && !testMode) {
 				console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
 				console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
 				console.log(chalk.gray('  "Unlike some people, this actually runs on merit, not nepotism."'));
@@ -559,7 +523,7 @@ GibRuns.start = function(options) {
 		}
 
 		// Output with beautiful formatting
-		if (GibRuns.logLevel >= 1) {
+		if (GibRuns.logLevel >= 1 && !testMode) {
 			console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.cyan.bold('  🚀 GIB-RUNS') + chalk.gray(' v' + packageJson.version));
 			console.log(chalk.gray('  "Unlike some people, this actually runs on merit, not nepotism."'));
@@ -584,15 +548,15 @@ GibRuns.start = function(options) {
 			if (https) {
 				console.log(chalk.white('  🔒 HTTPS:      ') + chalk.green(' Enabled') + chalk.gray(' (real security)'));
 			}
-			if (enableHealth) {
-				console.log(chalk.white('  💚 Health:     ') + chalk.green(' Enabled') + chalk.gray(' (GET /health)'));
-			}
 			if (autoRestart) {
 				console.log(chalk.white('  🔁 Auto-Restart:') + chalk.green(' Enabled') + chalk.gray(' (resilient mode)'));
 			}
 			console.log(chalk.cyan.bold('━'.repeat(60)));
 			console.log(chalk.gray('  Press Ctrl+C to stop'));
 			console.log(chalk.yellow('  💡 Tip: Share network URLs with your team!\n'));
+		} else if (testMode && GibRuns.logLevel >= 1) {
+			// Minimal output for tests
+			console.log('Serving at ' + serveURL);
 		}
 		
 		// Create share link if requested
@@ -740,9 +704,18 @@ GibRuns.start = function(options) {
 		const cssChange = path.extname(changePath) === ".css" && !noCssInject;
 		const relPath = path.relative(root, changePath);
 		const timestamp = getTimestamp();
-		const fileSize = fs.existsSync(changePath) ? fs.statSync(changePath).size : 0;
 		
+		// Only get file size if logging is enabled
+		let fileSize = 0;
 		if (GibRuns.logLevel >= 1) {
+			try {
+				fileSize = fs.existsSync(changePath) ? fs.statSync(changePath).size : 0;
+			} catch {
+				// Ignore stat errors
+			}
+		}
+		
+		if (GibRuns.logLevel >= 1 && !testMode) {
 			if (cssChange) {
 				console.log(chalk.magenta(`  ⚡ [${timestamp}] CSS updated: `) + chalk.gray(relPath) + 
 					chalk.dim(` (${(fileSize / 1024).toFixed(2)}KB)`));
@@ -758,18 +731,18 @@ GibRuns.start = function(options) {
 	}
 	
 	function handleAdd(addPath) {
-		const relPath = path.relative(root, addPath);
-		const timestamp = getTimestamp();
-		if (GibRuns.logLevel >= 2) {
+		if (GibRuns.logLevel >= 2 && !testMode) {
+			const relPath = path.relative(root, addPath);
+			const timestamp = getTimestamp();
 			console.log(chalk.green(`  ➕ [${timestamp}] File added: `) + chalk.gray(relPath));
 		}
 		handleChange(addPath);
 	}
 	
 	function handleUnlink(unlinkPath) {
-		const relPath = path.relative(root, unlinkPath);
-		const timestamp = getTimestamp();
-		if (GibRuns.logLevel >= 2) {
+		if (GibRuns.logLevel >= 2 && !testMode) {
+			const relPath = path.relative(root, unlinkPath);
+			const timestamp = getTimestamp();
 			console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
 		}
 		handleChange(unlinkPath);
@@ -782,8 +755,10 @@ GibRuns.start = function(options) {
 		.on("addDir", handleChange)
 		.on("unlinkDir", handleChange)
 		.on("ready", function () {
-			if (GibRuns.logLevel >= 1 && !testMode)
+			if (!GibRuns.watcherReady && GibRuns.logLevel >= 1 && !testMode) {
 				console.log(chalk.cyan("  ✓ Watching for file changes...\n"));
+				GibRuns.watcherReady = true;
+			}
 		})
 		.on("error", function (err) {
 			if (!testMode) {
@@ -815,7 +790,10 @@ GibRuns.broadcast = function(message) {
 };
 
 GibRuns.shutdown = function() {
-	if (GibRuns.logLevel >= 1 && GibRuns.startTime) {
+	// Detect test mode
+	var testMode = typeof describe !== 'undefined' && typeof it !== 'undefined';
+	
+	if (GibRuns.logLevel >= 1 && GibRuns.startTime && !testMode) {
 		var uptime = ((Date.now() - GibRuns.startTime) / 1000).toFixed(2);
 		console.log('\n' + chalk.cyan.bold('━'.repeat(60)));
 		console.log(chalk.yellow('  👋 Shutting down GIB-RUNS...'));

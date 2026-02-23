@@ -1,7 +1,7 @@
 {
   "name": "gib-runs",
-  "version": "2.5.0",
-  "description": "Modern development server with live reload, hot module replacement, and advanced features - runs on merit, not nepotism",
+  "version": "3.0.0-beta.1",
+  "description": "Plugin-based development server with live reload - runs on merit, not nepotism",
   "keywords": [
     "development",
     "server",
@@ -18,7 +18,9 @@
     "websocket",
     "performance",
     "compression",
-    "proxy"
+    "proxy",
+    "plugin",
+    "extensible"
   ],
   "author": "sofinco (https://github.com/levouinse)",
   "dependencies": {

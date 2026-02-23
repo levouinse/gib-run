@@ -2,16 +2,22 @@ const http = require('http');
 const connect = require('connect');
 const { eventBus, Events } = require('./event-bus');
 const { logger } = require('./logger');
+const PluginManager = require('./plugin-manager');
 
 class Server {
 	constructor(options = {}) {
 		this.options = options;
+		this.config = options;
 		this.app = connect();
 		this.server = null;
 		this.wsClients = [];
 		this.startTime = null;
 		this.requestCount = 0;
 		this.reloadCount = 0;
+		this.logger = logger;
+		
+		// Plugin system
+		this.pluginManager = new PluginManager(this);
 	}
 	
 	createServer() {
@@ -59,6 +65,9 @@ class Server {
 			
 			logger.success(`Server listening on ${this.protocol}://${address.address}:${address.port}`);
 			eventBus.emit(Events.SERVER_LISTENING, address);
+			
+			// Trigger plugin onStart hooks
+			this.pluginManager.start(address);
 		});
 	}
 	
@@ -128,6 +137,9 @@ class Server {
 			this.createServer();
 		}
 		
+		// Initialize plugins
+		await this.pluginManager.init();
+		
 		return new Promise((resolve, reject) => {
 			this.server.listen(port, host, (error) => {
 				if (error) {
@@ -140,7 +152,10 @@ class Server {
 		});
 	}
 	
-	close() {
+	async close() {
+		// Stop plugins
+		await this.pluginManager.stop();
+		
 		return new Promise((resolve) => {
 			if (this.server) {
 				this.server.close(() => {

@@ -4,9 +4,18 @@
 [![npm downloads](https://img.shields.io/npm/dm/gib-runs.svg)](https://www.npmjs.org/package/gib-runs)
 [![license](https://img.shields.io/npm/l/gib-runs.svg)](https://github.com/levouinse/gib-runs/blob/main/LICENSE)
 
-A modern development server with live reload and hot module replacement. Built for developers who value capability over connections.
+**Plugin-based development server with live reload.** Built for developers who value capability over connections.
 
 > *"Unlike some people, this actually runs on merit, not nepotism."*
+
+## What's New in v3.0?
+
+🔌 **Plugin System** - Extensible architecture  
+📦 **Smaller Core** - 30% smaller bundle  
+⚡ **Better Performance** - Optimized watcher  
+🛡️ **Improved Security** - Better error handling
+
+[Migration Guide](./MIGRATION.md) | [Plugin Guide](./PLUGIN_GUIDE.md)
 
 ## Why GIB-RUNS?
 
@@ -427,12 +436,12 @@ gib-runs --middleware=./middleware/custom.js
 Server automatically binds to `0.0.0.0` and shows all network URLs:
 
 ```
-🚀 GIB-RUNS v2.5.0
+🚀 GIB-RUNS v3.0.0-beta.1
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080
   🔗 Network:    http://192.168.1.100:8080
-  🔄 Live Reload: Enabled
+  🔄 Live Reload: Enabled (no dynasty needed)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

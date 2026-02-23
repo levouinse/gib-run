@@ -1,5 +1,4 @@
 test/
-test-tunnel-password.js
 .travis.yml
 .editorconfig
 .github/
