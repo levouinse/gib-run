@@ -43,7 +43,7 @@ These plugins are included in the package but only activate when configured:
 ### 1. Update Package
 
 ```bash
-npm install gib-runs@3.0.0-beta.1
+npm install gib-runs@3.0.0
 ```
 
 ### 2. Update Config

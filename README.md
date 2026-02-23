@@ -436,7 +436,7 @@ gib-runs --middleware=./middleware/custom.js
 Server automatically binds to `0.0.0.0` and shows all network URLs:
 
 ```
-🚀 GIB-RUNS v3.0.0-beta.1
+🚀 GIB-RUNS v3.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080

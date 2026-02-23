@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.0.0-beta.1] - 2026-02-23
+## [3.0.0] - 2026-02-23
 
 ### 🎉 MAJOR RELEASE: Plugin System
 
