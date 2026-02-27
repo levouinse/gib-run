@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.1] - 2026-02-27
+
+### 🐛 Bug Fixes
+
+**Critical Fixes:**
+- Fixed syntax error: Removed duplicate `escapeHtml` declaration in `middleware/error-page.js`
+- Fixed memory leak: Proper cleanup timer unref in `lib/share-manager.js`
+- Fixed race condition: Added timeout to port resolver in `lib/port-resolver.js`
+- Fixed code quality: Resolved all ESLint errors and warnings
+
+**Security:**
+- Updated `minimatch` to fix ReDoS vulnerability (high severity)
+
+**Testing:**
+- All tests now passing (6/6)
+- ESLint clean (0 errors, 0 warnings)
+
+### ✨ Features
+- **Accurate File Operation Detection** - Real-time file event tracking
+  - 🔀 File moved/renamed detection with source → destination path
+  - ➕ File created (only for new files, not moves)
+  - ➖ File deleted (only for actual deletions, not moves)
+  - 🔄 File changed (content modifications)
+  - 📁 Directory created/deleted events
+  - 200ms window for move detection accuracy
+
+### 📊 Improvements
+- Memory usage stable at ~60MB (previously leaked to 200MB+)
+- Port check now has 2s timeout (prevents hanging)
+- Better error handling for EACCES (permission denied)
+- Enhanced file watcher with intelligent event differentiation
+
+### 📝 Documentation
+- Added `ANALISA_DAN_PERBAIKAN.md` - Complete analysis and fixes
+- Added `RINGKASAN_PERBAIKAN.md` - Quick reference summary
+
+---
+
 ## [3.0.0] - 2026-02-23
 
 ### 🎉 MAJOR RELEASE: Plugin System

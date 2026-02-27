@@ -8,14 +8,15 @@
 
 > *"Unlike some people, this actually runs on merit, not nepotism."*
 
-## What's New in v3.0?
+## What's New in v3.0.1?
 
-🔌 **Plugin System** - Extensible architecture  
-📦 **Smaller Core** - 30% smaller bundle  
-⚡ **Better Performance** - Optimized watcher  
-🛡️ **Improved Security** - Better error handling
+🐛 **Bug Fixes** - Critical syntax errors and memory leaks fixed  
+🔒 **Security** - Updated dependencies, fixed vulnerabilities  
+⚡ **Performance** - Stable memory usage, no more leaks  
+✨ **File Tracking** - Accurate detection of moved, created, changed, and deleted files  
+✅ **Quality** - All tests passing, ESLint clean
 
-[Migration Guide](./MIGRATION.md) | [Plugin Guide](./PLUGIN_GUIDE.md)
+[Changelog](./CHANGELOG.md) | [Migration Guide](./MIGRATION.md)
 
 ## Why GIB-RUNS?
 
@@ -36,6 +37,7 @@ Named after Indonesia's Vice President Gibran Rakabuming Raka, who got his posit
 - 🎨 **Beautiful UI** - Modern status indicator with real-time feedback
 - 📊 **Performance Monitoring** - Track requests, reloads, and uptime
 - 📝 **Comprehensive Logging** - All requests, errors, and file changes with timestamps and file sizes
+- 🔀 **Smart File Tracking** - Accurately detects file moved, created, changed, and deleted operations
 - 📜 **Request History** - Track last 50 requests via `/history` endpoint
 - 🗜️ **Compression** - Built-in gzip compression
 - 🔒 **HTTPS/HTTP2** - Secure development with modern protocols
@@ -50,7 +52,7 @@ Named after Indonesia's Vice President Gibran Rakabuming Raka, who got his posit
 - 🌍 **Public Tunnels** - Share your dev server with anyone, anywhere
 - 📱 **Multi-Device** - Access from any device on your network
 
-### 🆕 New Features
+### 🆕 Advanced Features
 
 - 🎯 **Interactive CLI** - Inquirer-style setup wizard
 - 🔍 **Auto-Detect** - Automatically detect project type (React, Vue, Angular, etc.)
@@ -436,7 +438,7 @@ gib-runs --middleware=./middleware/custom.js
 Server automatically binds to `0.0.0.0` and shows all network URLs:
 
 ```
-🚀 GIB-RUNS v3.0.0
+🚀 GIB-RUNS v3.0.1
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080

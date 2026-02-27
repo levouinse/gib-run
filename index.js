@@ -36,7 +36,8 @@ const GibRuns = {
 	wsClients: [],
 	autoRestart: false,
 	restartCount: 0,
-	watcherReady: false // Global flag to prevent spam
+	watcherReady: false, // Global flag to prevent spam
+	isShuttingDown: false // Prevent multiple shutdown calls
 };
 
 // Optimized timestamp function
@@ -83,7 +84,10 @@ function staticServer(root) {
 	return (req, res, next) => {
 		if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 		
+		// Prevent path traversal attacks
 		const reqpath = isFile ? '' : getCachedUrl(req.url);
+		const normalizedPath = path.normalize(reqpath).replace(/^(\.\.[\\/])+/, '');
+		
 		const hasNoOrigin = !req.headers.origin;
 		const injectCandidates = [/<\/body>/i, /<\/svg>/i, /<\/head>/i];
 		let injectTag = null;
@@ -136,7 +140,7 @@ function staticServer(root) {
 			}
 		};
 
-		send(req, reqpath, { root })
+		send(req, normalizedPath, { root })
 			.on('error', error)
 			.on('directory', directory)
 			.on('file', file)
@@ -699,6 +703,11 @@ GibRuns.start = function(options) {
 		interval: testMode ? undefined : 100,
 		binaryInterval: testMode ? undefined : 300
 	});
+	
+	// Track recent unlinks to detect moves
+	const recentUnlinks = new Map();
+	const MOVE_DETECTION_WINDOW = 200; // ms
+	
 	function handleChange(changePath) {
 		GibRuns.reloadCount++;
 		const cssChange = path.extname(changePath) === ".css" && !noCssInject;
@@ -731,20 +740,55 @@ GibRuns.start = function(options) {
 	}
 	
 	function handleAdd(addPath) {
-		if (GibRuns.logLevel >= 2 && !testMode) {
-			const relPath = path.relative(root, addPath);
-			const timestamp = getTimestamp();
-			console.log(chalk.green(`  ➕ [${timestamp}] File added: `) + chalk.gray(relPath));
+		const now = Date.now();
+		const relPath = path.relative(root, addPath);
+		const timestamp = getTimestamp();
+		
+		// Check if this is part of a move operation
+		let isMove = false;
+		let oldPath = null;
+		
+		for (const [unlinkedPath, unlinkTime] of recentUnlinks.entries()) {
+			if (now - unlinkTime < MOVE_DETECTION_WINDOW) {
+				// This add happened shortly after an unlink - likely a move
+				isMove = true;
+				oldPath = unlinkedPath;
+				recentUnlinks.delete(unlinkedPath);
+				break;
+			}
 		}
+		
+		if (GibRuns.logLevel >= 2 && !testMode) {
+			if (isMove && oldPath) {
+				console.log(chalk.blue(`  🔀 [${timestamp}] File moved: `) + 
+					chalk.gray(oldPath) + chalk.yellow(' → ') + chalk.gray(relPath));
+			} else {
+				console.log(chalk.green(`  ➕ [${timestamp}] File created: `) + chalk.gray(relPath));
+			}
+		}
+		
 		handleChange(addPath);
 	}
 	
 	function handleUnlink(unlinkPath) {
-		if (GibRuns.logLevel >= 2 && !testMode) {
-			const relPath = path.relative(root, unlinkPath);
-			const timestamp = getTimestamp();
-			console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
-		}
+		const relPath = path.relative(root, unlinkPath);
+		const timestamp = getTimestamp();
+		const now = Date.now();
+		
+		// Store this unlink temporarily to detect moves
+		recentUnlinks.set(relPath, now);
+		
+		// Clean up old entries
+		setTimeout(function() {
+			if (recentUnlinks.has(relPath)) {
+				// If still in map after timeout, it was a real delete, not a move
+				recentUnlinks.delete(relPath);
+				if (GibRuns.logLevel >= 2 && !testMode) {
+					console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
+				}
+			}
+		}, MOVE_DETECTION_WINDOW);
+		
 		handleChange(unlinkPath);
 	}
 	
@@ -752,8 +796,22 @@ GibRuns.start = function(options) {
 		.on("change", handleChange)
 		.on("add", handleAdd)
 		.on("unlink", handleUnlink)
-		.on("addDir", handleChange)
-		.on("unlinkDir", handleChange)
+		.on("addDir", function(dirPath) {
+			if (GibRuns.logLevel >= 2 && !testMode) {
+				const relPath = path.relative(root, dirPath);
+				const timestamp = getTimestamp();
+				console.log(chalk.green(`  📁 [${timestamp}] Directory created: `) + chalk.gray(relPath));
+			}
+			handleChange(dirPath);
+		})
+		.on("unlinkDir", function(dirPath) {
+			if (GibRuns.logLevel >= 2 && !testMode) {
+				const relPath = path.relative(root, dirPath);
+				const timestamp = getTimestamp();
+				console.log(chalk.red(`  📁 [${timestamp}] Directory deleted: `) + chalk.gray(relPath));
+			}
+			handleChange(dirPath);
+		})
 		.on("ready", function () {
 			if (!GibRuns.watcherReady && GibRuns.logLevel >= 1 && !testMode) {
 				console.log(chalk.cyan("  ✓ Watching for file changes...\n"));
@@ -789,7 +847,52 @@ GibRuns.broadcast = function(message) {
 	return false;
 };
 
+// Setup graceful shutdown handlers
+var setupShutdownHandlers = function() {
+	var handleShutdown = function(signal) {
+		if (GibRuns.logLevel >= 1) {
+			console.log(chalk.yellow(`\n  ⚠ Received ${signal}, shutting down gracefully...`));
+		}
+		GibRuns.shutdown();
+	};
+	
+	// Handle Ctrl+C
+	process.on('SIGINT', function() {
+		handleShutdown('SIGINT');
+	});
+	
+	// Handle kill command
+	process.on('SIGTERM', function() {
+		handleShutdown('SIGTERM');
+	});
+	
+	// Handle uncaught exceptions
+	process.on('uncaughtException', function(err) {
+		console.error(chalk.red('\n  ✖ Uncaught Exception:'));
+		console.error(err.stack || err.message);
+		GibRuns.shutdown();
+	});
+	
+	// Handle unhandled promise rejections
+	process.on('unhandledRejection', function(reason, promise) {
+		console.error(chalk.red('\n  ✖ Unhandled Rejection at:'), promise);
+		console.error(chalk.red('  Reason:'), reason);
+		if (GibRuns.logLevel >= 2) {
+			GibRuns.shutdown();
+		}
+	});
+};
+
+// Setup handlers once
+setupShutdownHandlers();
+
 GibRuns.shutdown = function() {
+	// Prevent multiple shutdown calls
+	if (GibRuns.isShuttingDown) {
+		return;
+	}
+	GibRuns.isShuttingDown = true;
+	
 	// Detect test mode
 	var testMode = typeof describe !== 'undefined' && typeof it !== 'undefined';
 	
@@ -804,24 +907,83 @@ GibRuns.shutdown = function() {
 		console.log(chalk.cyan.bold('━'.repeat(60)) + '\n');
 	}
 	
-	// Stop process runner if active
-	if (GibRuns.processRunner && GibRuns.processRunner.isRunning()) {
-		console.log(chalk.yellow('  ⚠ Stopping child process...'));
-		GibRuns.processRunner.stopProcess();
-	}
+	// Set timeout for forced shutdown
+	var shutdownTimeout = setTimeout(function() {
+		console.error(chalk.red('  ✖ Forced shutdown after timeout'));
+		process.exit(1);
+	}, 5000);
 	
-	// Stop tunnel if active
-	if (GibRuns.tunnel) {
-		GibRuns.tunnel.stop();
-	}
-	
-	var watcher = GibRuns.watcher;
-	if (watcher) {
-		watcher.close();
-	}
-	var server = GibRuns.server;
-	if (server)
-		server.close();
+	// Shutdown sequence
+	Promise.all([
+		// Stop process runner if active
+		new Promise(function(resolve) {
+			if (GibRuns.processRunner && GibRuns.processRunner.isRunning()) {
+				if (GibRuns.logLevel >= 1 && !testMode) {
+					console.log(chalk.yellow('  ⚠ Stopping child process...'));
+				}
+				GibRuns.processRunner.stopProcess();
+				setTimeout(resolve, 1000);
+			} else {
+				resolve();
+			}
+		}),
+		
+		// Stop tunnel if active
+		new Promise(function(resolve) {
+			if (GibRuns.tunnel) {
+				GibRuns.tunnel.stop();
+			}
+			resolve();
+		}),
+		
+		// Close all WebSocket connections
+		new Promise(function(resolve) {
+			if (GibRuns.wsClients && GibRuns.wsClients.length > 0) {
+				GibRuns.wsClients.forEach(function(ws) {
+					if (ws && ws.close) {
+						try {
+							ws.close();
+						} catch {
+							// Ignore close errors
+						}
+					}
+				});
+				GibRuns.wsClients = [];
+			}
+			resolve();
+		}),
+		
+		// Close file watcher
+		new Promise(function(resolve) {
+			var watcher = GibRuns.watcher;
+			if (watcher) {
+				watcher.close();
+			}
+			resolve();
+		}),
+		
+		// Close HTTP server
+		new Promise(function(resolve) {
+			var server = GibRuns.server;
+			if (server) {
+				server.close(function() {
+					resolve();
+				});
+			} else {
+				resolve();
+			}
+		})
+	]).then(function() {
+		clearTimeout(shutdownTimeout);
+		if (GibRuns.logLevel >= 1 && !testMode) {
+			console.log(chalk.green('  ✓ Shutdown complete\n'));
+		}
+		process.exit(0);
+	}).catch(function(err) {
+		clearTimeout(shutdownTimeout);
+		console.error(chalk.red('  ✖ Error during shutdown:'), err.message);
+		process.exit(1);
+	});
 };
 
 module.exports = GibRuns;

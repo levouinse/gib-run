@@ -1,3 +1,5 @@
+const { escapeHtml } = require('../lib/utils');
+
 const errorTemplate = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -114,18 +116,20 @@ module.exports = (options = {}) => {
 		const errorInfo = errorMessages[status] || errorMessages[500];
 		
 		let html = errorTemplate
-			.replace(/{{status}}/g, status)
-			.replace(/{{message}}/g, errorInfo.message)
-			.replace(/{{description}}/g, errorInfo.description);
+			.replace(/{{status}}/g, escapeHtml(String(status)))
+			.replace(/{{message}}/g, escapeHtml(errorInfo.message))
+			.replace(/{{description}}/g, escapeHtml(errorInfo.description));
 		
 		if (showStack && err.stack) {
-			html = html.replace('{{details}}', `<div class="error-details"><strong>Error Details:</strong><pre>${err.stack}</pre></div>`);
+			const escapedStack = escapeHtml(err.stack);
+			html = html.replace('{{details}}', `<div class="error-details"><strong>Error Details:</strong><pre>${escapedStack}</pre></div>`);
 		} else {
 			html = html.replace('{{details}}', '');
 		}
 		
 		res.statusCode = status;
-		res.setHeader('Content-Type', 'text/html');
+		res.setHeader('Content-Type', 'text/html; charset=utf-8');
+		res.setHeader('X-Content-Type-Options', 'nosniff');
 		res.end(html);
 	};
 };

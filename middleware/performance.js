@@ -1,22 +1,31 @@
+const { createCleanupTimer, createLRUCache } = require('../lib/utils');
+
 module.exports = () => {
-	const requestTimes = new Map();
+	const requestTimes = createLRUCache(100);
 	const slowRequests = [];
 	const MAX_SLOW_REQUESTS = 50;
-	const MAX_REQUEST_TIMES = 100;
+	
+	// FIX: Periodic cleanup to prevent memory leak
+	createCleanupTimer(() => {
+		const cutoff = Date.now() - 300000; // 5 minutes
+		
+		// Cleanup old slow requests
+		const validSlowRequests = slowRequests.filter(req => 
+			req.timestamp > cutoff
+		);
+		slowRequests.length = 0;
+		slowRequests.push(...validSlowRequests);
+	}, 300000);
 	
 	return (req, res, next) => {
 		const start = Date.now();
-		const url = req.url.substring(0, 100); // Limit URL length
+		const url = req.url.substring(0, 100);
 		
 		res.on('finish', () => {
 			const duration = Date.now() - start;
 			
-			// LRU cache for request times
-			if (requestTimes.size >= MAX_REQUEST_TIMES) {
-				const firstKey = requestTimes.keys().next().value;
-				requestTimes.delete(firstKey);
-			}
-			requestTimes.set(url, duration);
+			// Store timestamp in LRU cache
+			requestTimes.set(url, Date.now());
 			
 			// Track slow requests with limit
 			if (duration > 1000) {
