@@ -16,7 +16,7 @@
 ✨ **File Tracking** - Accurate detection of moved, created, changed, and deleted files  
 ✅ **Quality** - All tests passing, ESLint clean
 
-[Changelog](./CHANGELOG.md) | [Migration Guide](./MIGRATION.md)
+[Changelog](./CHANGELOG.md)
 
 ## Why GIB-RUNS?
 
