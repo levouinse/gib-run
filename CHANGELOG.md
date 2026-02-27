@@ -34,10 +34,6 @@ All notable changes to this project will be documented in this file.
 - Better error handling for EACCES (permission denied)
 - Enhanced file watcher with intelligent event differentiation
 
-### 📝 Documentation
-- Added `ANALISA_DAN_PERBAIKAN.md` - Complete analysis and fixes
-- Added `RINGKASAN_PERBAIKAN.md` - Quick reference summary
-
 ---
 
 ## [3.0.0] - 2026-02-23
