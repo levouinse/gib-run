@@ -2,6 +2,59 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.2] - 2026-03-02
+
+### 🔒 Security Fixes
+
+**Critical:**
+- **Fixed IP spoofing vulnerability in rate limiter** - Added `trustProxy` option (default: false) to prevent attackers from bypassing rate limits via `x-forwarded-for` header spoofing
+- **Fixed password storage in share manager** - Passwords now hashed with SHA-256 before storage, preventing plaintext exposure in memory dumps
+
+**High:**
+- Improved timing attack resistance in share link validation using pre-computed hashes
+
+### 🐛 Bug Fixes
+
+**Critical:**
+- **Fixed memory leak in logger middleware** - Added proper stream cleanup on process exit
+- **Fixed watcher infinite restart loop** - Added restart counter (max 3 attempts) to prevent infinite recovery loops on ENOSPC errors
+- **Fixed SPA middleware duplication** - Unified 3 different SPA implementations into single consistent behavior
+
+**High:**
+- Fixed process runner memory leak - Added cleanup handlers for process logs array
+- Fixed inconsistent error handling in hooks - Now uses centralized logger
+- Fixed stream leak in logger middleware - Proper cleanup on SIGINT/SIGTERM
+
+### ⚡ Performance Improvements
+
+- Optimized share manager cleanup - Use Array.from to avoid iterator issues during Map deletion
+- Reduced port check timeout from 2s to 500ms for faster startup
+- Moved URL require outside hot path in staticServer for better performance
+
+### 🔧 Code Quality
+
+**Eliminated Duplications:**
+- Removed duplicate `getTimestamp()` function (3 instances → 1 centralized)
+- Removed duplicate `escapeHtml()` function (2 instances → 1 centralized)
+- Removed duplicate logger timestamp method - now uses centralized utility
+- Unified SPA middleware implementations (3 different → 1 consistent)
+
+**Improvements:**
+- Added atomic lock for shutdown to prevent race conditions
+- Added cleanup timers for move detection Map to prevent memory leaks
+- Improved file deletion logging timing (now logs immediately when confirmed)
+- Added proper cleanup handlers for all timers and streams
+
+### 📊 Statistics
+
+- **Issues Fixed:** 21 (13 from v3.0.1 + 8 new critical/high)
+- **Security Vulnerabilities:** 2 critical fixed
+- **Memory Leaks:** 5 fixed
+- **Code Duplications:** 4 eliminated
+- **Lines Optimized:** ~200 lines
+
+---
+
 ## [3.0.1] - 2026-02-27
 
 ### 🐛 Bug Fixes

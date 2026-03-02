@@ -1,4 +1,5 @@
 const chalk = require('chalk');
+const { getTimestamp } = require('../lib/utils');
 
 const LogLevel = {
 	SILENT: 0,
@@ -18,43 +19,39 @@ class Logger {
 		this.level = typeof level === 'string' ? LogLevel[level.toUpperCase()] : level;
 	}
 	
-	getTimestamp() {
-		return new Date().toISOString();
-	}
-	
 	error(message, ...args) {
 		if (this.level >= LogLevel.ERROR) {
-			console.error(chalk.red(`[${this.getTimestamp()}] ERROR:`), message, ...args);
+			console.error(chalk.red(`[${getTimestamp()}] ERROR:`), message, ...args);
 		}
 	}
 	
 	warn(message, ...args) {
 		if (this.level >= LogLevel.WARN) {
-			console.warn(chalk.yellow(`[${this.getTimestamp()}] WARN:`), message, ...args);
+			console.warn(chalk.yellow(`[${getTimestamp()}] WARN:`), message, ...args);
 		}
 	}
 	
 	info(message, ...args) {
 		if (this.level >= LogLevel.INFO) {
-			console.log(chalk.cyan(`[${this.getTimestamp()}] INFO:`), message, ...args);
+			console.log(chalk.cyan(`[${getTimestamp()}] INFO:`), message, ...args);
 		}
 	}
 	
 	debug(message, ...args) {
 		if (this.level >= LogLevel.DEBUG) {
-			console.log(chalk.gray(`[${this.getTimestamp()}] DEBUG:`), message, ...args);
+			console.log(chalk.gray(`[${getTimestamp()}] DEBUG:`), message, ...args);
 		}
 	}
 	
 	verbose(message, ...args) {
 		if (this.level >= LogLevel.VERBOSE) {
-			console.log(chalk.dim(`[${this.getTimestamp()}] VERBOSE:`), message, ...args);
+			console.log(chalk.dim(`[${getTimestamp()}] VERBOSE:`), message, ...args);
 		}
 	}
 	
 	success(message, ...args) {
 		if (this.level >= LogLevel.INFO) {
-			console.log(chalk.green(`[${this.getTimestamp()}] SUCCESS:`), message, ...args);
+			console.log(chalk.green(`[${getTimestamp()}] SUCCESS:`), message, ...args);
 		}
 	}
 	
@@ -74,7 +71,7 @@ class Logger {
 				chalk.green;
 			
 			console.log(
-				chalk.gray(`[${this.getTimestamp()}]`),
+				chalk.gray(`[${getTimestamp()}]`),
 				methodColor(method.padEnd(6)),
 				chalk.white(url.padEnd(40).substring(0, 40)),
 				statusColor(status.toString()),
@@ -94,7 +91,7 @@ class Logger {
 			
 			const style = icons[type] || icons.change;
 			console.log(
-				chalk.gray(`[${this.getTimestamp()}]`),
+				chalk.gray(`[${getTimestamp()}]`),
 				style.color(style.icon),
 				style.color(type.toUpperCase()),
 				chalk.gray(file)

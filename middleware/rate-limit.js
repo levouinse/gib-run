@@ -1,6 +1,7 @@
 module.exports = (options = {}) => {
 	const maxRequests = options.max || 100;
 	const windowMs = options.window || 60000;
+	const trustProxy = options.trustProxy || false; // Only trust x-forwarded-for if explicitly enabled
 	const requests = {};
 	
 	// FIX: Proper cleanup with unref to prevent blocking exit
@@ -16,7 +17,12 @@ module.exports = (options = {}) => {
 	if (cleanupInterval.unref) cleanupInterval.unref();
 	
 	return (req, res, next) => {
-		const ip = (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '').substring(0, 45); // Limit IP length
+		// FIX: Only use x-forwarded-for if trustProxy is enabled to prevent IP spoofing
+		const ip = (trustProxy && req.headers['x-forwarded-for'] 
+			? req.headers['x-forwarded-for'].split(',')[0].trim() 
+			: req.connection.remoteAddress || req.socket.remoteAddress || ''
+		).substring(0, 45); // Limit IP length
+		
 		const now = Date.now();
 		
 		if (!requests[ip]) requests[ip] = [];

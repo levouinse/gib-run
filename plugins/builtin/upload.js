@@ -2,6 +2,17 @@ const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
 
+// MIME type validation mapping
+const ALLOWED_MIME_TYPES = {
+	'.jpg': ['image/jpeg'],
+	'.jpeg': ['image/jpeg'],
+	'.png': ['image/png'],
+	'.gif': ['image/gif'],
+	'.pdf': ['application/pdf'],
+	'.txt': ['text/plain'],
+	'.zip': ['application/zip', 'application/x-zip-compressed']
+};
+
 module.exports = {
 	name: 'upload',
 	version: '1.0.0',
@@ -33,6 +44,12 @@ module.exports = {
 			
 			if (!allowedExts.includes(ext)) {
 				return cb(new Error(`File type ${ext} not allowed`), false);
+			}
+			
+			// Validate MIME type matches extension
+			const allowedMimes = ALLOWED_MIME_TYPES[ext];
+			if (allowedMimes && !allowedMimes.includes(file.mimetype)) {
+				return cb(new Error(`MIME type ${file.mimetype} doesn't match extension ${ext}`), false);
 			}
 			
 			cb(null, true);

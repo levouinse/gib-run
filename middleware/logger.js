@@ -24,6 +24,18 @@ module.exports = (options = {}) => {
 		} catch (e) {}
 	};
 	
+	// Cleanup on process exit
+	const cleanup = () => {
+		if (logStream) {
+			logStream.end();
+			logStream = null;
+		}
+	};
+	
+	process.once('exit', cleanup);
+	process.once('SIGINT', cleanup);
+	process.once('SIGTERM', cleanup);
+	
 	return (req, res, next) => {
 		const start = Date.now();
 		const logEntry = {
@@ -38,8 +50,10 @@ module.exports = (options = {}) => {
 		res.end = function(...args) {
 			logEntry.status = res.statusCode;
 			logEntry.duration = (Date.now() - start) + 'ms';
-			logStream.write(JSON.stringify(logEntry) + '\n');
-			checkRotate();
+			if (logStream) {
+				logStream.write(JSON.stringify(logEntry) + '\n');
+				checkRotate();
+			}
 			originalEnd.apply(res, args);
 		};
 		

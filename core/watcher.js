@@ -11,6 +11,8 @@ class Watcher {
 		this.ignored = options.ignore || [];
 		this.wait = options.wait || 100;
 		this.noCssInject = options.noCssInject || false;
+		this.restartCount = 0; // Track restart attempts
+		this.maxRestarts = 3; // Max restart attempts
 	}
 	
 	start() {
@@ -56,6 +58,18 @@ class Watcher {
 			.on('error', (error) => {
 				logger.error('Watcher error:', error.message);
 				eventBus.emit('watcher:error', error);
+				
+				// Auto-recovery: restart watcher after error with limit
+				if (error.code === 'ENOSPC' && this.restartCount < this.maxRestarts) {
+					this.restartCount++;
+					logger.warn(`File watcher limit reached - attempting recovery ${this.restartCount}/${this.maxRestarts} in 5s...`);
+					setTimeout(() => {
+						this.stop();
+						this.start();
+					}, 5000);
+				} else if (this.restartCount >= this.maxRestarts) {
+					logger.error('Max watcher restart attempts reached. Please increase system file watch limit.');
+				}
 			});
 		
 		return this.watcher;

@@ -1,4 +1,5 @@
 const { eventBus, Events } = require('./event-bus');
+const { logger } = require('./logger');
 
 class HookManager {
 	constructor() {
@@ -35,7 +36,7 @@ class HookManager {
 			try {
 				await handler(...args);
 			} catch (error) {
-				console.error(`Hook ${hookName} error:`, error);
+				logger.error(`Hook ${hookName} error:`, error.message);
 			}
 		}
 	}
@@ -47,7 +48,7 @@ class HookManager {
 			try {
 				handler(...args);
 			} catch (error) {
-				console.error(`Hook ${hookName} error:`, error);
+				logger.error(`Hook ${hookName} error:`, error.message);
 			}
 		}
 	}

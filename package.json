@@ -1,6 +1,6 @@
 {
   "name": "gib-runs",
-  "version": "3.0.1",
+  "version": "3.0.2",
   "description": "Plugin-based development server with live reload - runs on merit, not nepotism",
   "keywords": [
     "development",

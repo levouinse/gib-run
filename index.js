@@ -11,6 +11,7 @@ const chalk = require('chalk');
 const portResolver = require('./lib/port-resolver');
 const shareManager = require('./lib/share-manager');
 const { logger } = require('./core/logger');
+const { getTimestamp, escapeHtml, sanitizePath, createLRUCache } = require('./lib/utils');
 
 // Lazy load heavy modules
 let serveIndex, loggerMorgan, WebSocket, open, es, compression, os;
@@ -37,17 +38,9 @@ const GibRuns = {
 	autoRestart: false,
 	restartCount: 0,
 	watcherReady: false, // Global flag to prevent spam
-	isShuttingDown: false // Prevent multiple shutdown calls
+	isShuttingDown: false, // Prevent multiple shutdown calls
+	shuttingDownLock: false // Atomic lock for shutdown
 };
-
-// Optimized timestamp function
-const getTimestamp = () => new Date().toISOString();
-
-const escape = (html) => String(html)
-	.replace(/&(?!\w+;)/g, '&amp;')
-	.replace(/</g, '&lt;')
-	.replace(/>/g, '&gt;')
-	.replace(/"/g, '&quot;');
 
 function staticServer(root) {
 	let isFile = false;
@@ -57,26 +50,18 @@ function staticServer(root) {
 		if (e.code !== 'ENOENT') throw e;
 	}
 	
-	// LRU cache with size limit
-	const urlCache = new Map();
-	const MAX_CACHE = 50;
+	// LRU cache with size limit - use centralized utility
+	const urlCache = createLRUCache(50);
+	
+	// Move URL require outside hot path
+	const { URL } = require('url');
 	
 	const getCachedUrl = (url) => {
 		if (urlCache.has(url)) {
-			const value = urlCache.get(url);
-			urlCache.delete(url);
-			urlCache.set(url, value); // Move to end (LRU)
-			return value;
+			return urlCache.get(url);
 		}
 		
-		const { URL } = require('url');
 		const pathname = new URL(url, 'http://localhost').pathname;
-		
-		if (urlCache.size >= MAX_CACHE) {
-			const firstKey = urlCache.keys().next().value;
-			urlCache.delete(firstKey);
-		}
-		
 		urlCache.set(url, pathname);
 		return pathname;
 	};
@@ -84,9 +69,9 @@ function staticServer(root) {
 	return (req, res, next) => {
 		if (req.method !== 'GET' && req.method !== 'HEAD') return next();
 		
-		// Prevent path traversal attacks
+		// Prevent path traversal attacks - use centralized utility
 		const reqpath = isFile ? '' : getCachedUrl(req.url);
-		const normalizedPath = path.normalize(reqpath).replace(/^(\.\.[\\/])+/, '');
+		const normalizedPath = sanitizePath(reqpath);
 		
 		const hasNoOrigin = !req.headers.origin;
 		const injectCandidates = [/<\/body>/i, /<\/svg>/i, /<\/head>/i];
@@ -96,7 +81,7 @@ function staticServer(root) {
 			const pathname = getCachedUrl(req.originalUrl);
 			res.statusCode = 301;
 			res.setHeader('Location', pathname + '/');
-			res.end('Redirecting to ' + escape(pathname) + '/');
+			res.end('Redirecting to ' + escapeHtml(pathname) + '/');
 		};
 
 		const file = (filepath) => {
@@ -104,6 +89,8 @@ function staticServer(root) {
 			const injectableExts = ['', '.html', '.htm', '.xhtml', '.php', '.svg'];
 			
 			if (hasNoOrigin && injectableExts.includes(ext)) {
+				// NOTE: fs.readFileSync is blocking I/O - consider caching for production
+				// For dev server, this is acceptable as files change frequently
 				const contents = fs.readFileSync(filepath, 'utf8');
 				const match = injectCandidates.find(regex => regex.test(contents));
 				
@@ -708,6 +695,18 @@ GibRuns.start = function(options) {
 	const recentUnlinks = new Map();
 	const MOVE_DETECTION_WINDOW = 200; // ms
 	
+	// Cleanup timer to prevent memory leak
+	const unlinkCleanupTimer = setInterval(() => {
+		const now = Date.now();
+		for (const [path, time] of recentUnlinks.entries()) {
+			if (now - time > MOVE_DETECTION_WINDOW * 2) {
+				recentUnlinks.delete(path);
+			}
+		}
+	}, 5000); // Cleanup every 5 seconds
+	
+	if (unlinkCleanupTimer.unref) unlinkCleanupTimer.unref();
+	
 	function handleChange(changePath) {
 		GibRuns.reloadCount++;
 		const cssChange = path.extname(changePath) === ".css" && !noCssInject;
@@ -772,19 +771,18 @@ GibRuns.start = function(options) {
 	
 	function handleUnlink(unlinkPath) {
 		const relPath = path.relative(root, unlinkPath);
-		const timestamp = getTimestamp();
 		const now = Date.now();
 		
 		// Store this unlink temporarily to detect moves
 		recentUnlinks.set(relPath, now);
 		
-		// Clean up old entries
+		// Clean up after detection window - if still in map, it was a real delete
 		setTimeout(function() {
 			if (recentUnlinks.has(relPath)) {
-				// If still in map after timeout, it was a real delete, not a move
 				recentUnlinks.delete(relPath);
+				// Log delete immediately when confirmed
 				if (GibRuns.logLevel >= 2 && !testMode) {
-					console.log(chalk.red(`  ➖ [${timestamp}] File deleted: `) + chalk.gray(relPath));
+					console.log(chalk.red(`  ➖ [${getTimestamp()}] File deleted: `) + chalk.gray(relPath));
 				}
 			}
 		}, MOVE_DETECTION_WINDOW);
@@ -887,10 +885,11 @@ var setupShutdownHandlers = function() {
 setupShutdownHandlers();
 
 GibRuns.shutdown = function() {
-	// Prevent multiple shutdown calls
-	if (GibRuns.isShuttingDown) {
+	// Atomic lock to prevent race condition
+	if (GibRuns.shuttingDownLock) {
 		return;
 	}
+	GibRuns.shuttingDownLock = true;
 	GibRuns.isShuttingDown = true;
 	
 	// Detect test mode
