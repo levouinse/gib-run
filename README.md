@@ -8,13 +8,13 @@
 
 > *"Unlike some people, this actually runs on merit, not nepotism."*
 
-## What's New in v3.0.1?
+## What's New in v3.0.2?
 
-🐛 **Bug Fixes** - Critical syntax errors and memory leaks fixed  
-🔒 **Security** - Updated dependencies, fixed vulnerabilities  
-⚡ **Performance** - Stable memory usage, no more leaks  
-✨ **File Tracking** - Accurate detection of moved, created, changed, and deleted files  
-✅ **Quality** - All tests passing, ESLint clean
+🔒 **Security Fixes** - Fixed IP spoofing vulnerability in rate limiter and password storage in share manager  
+🐛 **Bug Fixes** - Fixed memory leaks in logger and watcher, eliminated SPA middleware duplication  
+⚡ **Performance** - Optimized share manager cleanup and reduced port check timeout  
+🔧 **Code Quality** - Eliminated code duplications and improved cleanup handlers  
+✅ **Quality** - 21 issues fixed, all tests passing, ESLint clean
 
 [Changelog](./CHANGELOG.md)
 
@@ -438,7 +438,7 @@ gib-runs --middleware=./middleware/custom.js
 Server automatically binds to `0.0.0.0` and shows all network URLs:
 
 ```
-🚀 GIB-RUNS v3.0.1
+🚀 GIB-RUNS v3.0.2
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   📁 Root:       /home/user/project
   🌐 Local:      http://127.0.0.1:8080
